@@ -1,0 +1,178 @@
+/* ================================================
+   Design System — Amber & Ink
+   Warm paper · Deep ink · Amber gold
+   ================================================ */
+:root {
+  --font-primary: 'Outfit', 'Noto Sans SC', sans-serif;
+  --font-display: 'Outfit', 'Noto Sans SC', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Georgia', serif;
+
+  /* --- Core Palette --- */
+  --background:          #faf6f1;
+  --surface:             #faf6f1;
+  --surface-bright:      #fdfaef;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low:    #f5f0e8;
+  --surface-container:        #efe9de;
+  --surface-container-high:   #e8e0d2;
+  --surface-container-highest:#ddd4c4;
+  --surface-dim:         #f0ebe3;
+
+  --on-background:       #1c1917;
+  --on-surface:          #1c1917;
+  --on-surface-variant:  #78716c;
+
+  --primary:             #d97706;
+  --primary-dim:         #b45309;
+  --primary-container:   #fbbf24;
+  --on-primary:          #fffbf0;
+  --on-primary-container:#78350f;
+  --primary-fixed:       #fbbf24;
+  --primary-fixed-dim:   #f59e0b;
+  --inverse-primary:     #fbbf24;
+
+  --secondary:           #15803d;
+  --secondary-container: #86efac;
+  --on-secondary:        #f0fdf4;
+  --on-secondary-container: #14532d;
+
+  --tertiary:            #7c3aed;
+  --tertiary-container:  #ddd6fe;
+  --on-tertiary-container:#5b21b6;
+
+  --error:               #dc2626;
+  --error-container:     #fca5a5;
+  --on-error-container:  #7f1d1d;
+
+  --outline:             #a8a29e;
+  --outline-variant:     #d6d3d1;
+
+  /* --- Semantic Aliases --- */
+  --card-bg:             var(--surface-container-lowest);
+  --card-border:         rgba(168, 162, 158, 0.18);
+  --card-shadow:         0 1px 3px rgba(28, 25, 23, 0.04), 0 4px 14px rgba(28, 25, 23, 0.03);
+  --card-shadow-hover:   0 4px 20px rgba(28, 25, 23, 0.08), 0 2px 8px rgba(28, 25, 23, 0.05);
+
+  --accent-primary:      var(--primary);
+  --accent-soft:         rgba(217, 119, 6, 0.08);
+  --accent-mid:          rgba(217, 119, 6, 0.14);
+
+  --text-primary:        var(--on-surface);
+  --text-secondary:      var(--on-surface-variant);
+  --text-muted:          var(--outline);
+  --text-on-accent:      var(--on-primary);
+
+  /* --- Decorative Amber (used in gradients, badges, etc.) --- */
+  --amber-dark:          #78350f;
+  --amber-mid:           #92400e;
+  --amber-glow:          rgba(217, 119, 6, 0.25);
+  --amber-gradient:      linear-gradient(135deg, #fbbf24, #f59e0b);
+
+  /* --- Glass surfaces (topbar, bottom nav) --- */
+  --glass-bg:            rgba(255, 255, 255, 0.85);
+  --glass-border:        rgba(168, 162, 158, 0.22);
+
+  /* --- Shape --- */
+  --r-sm:    8px;
+  --r-md:    12px;
+  --r-lg:    16px;
+  --r-xl:    24px;
+  --r-full:  9999px;
+
+  /* --- Motion --- */
+  --t-fast:   0.15s ease;
+  --t-smooth: 0.25s cubic-bezier(0.2, 0, 0, 1);
+  --t-bounce: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Bottom Nav height --- */
+  --bottom-nav-h: 72px;
+}
+
+/* ================================================
+   Dark Theme Override
+   ================================================ */
+[data-theme="dark"] {
+  --background:          #1a1714;
+  --surface:             #1a1714;
+  --surface-bright:      #1a1714;
+  --surface-container-lowest: #252220;
+  --surface-container-low:    #2d2a27;
+  --surface-container:        #373330;
+  --surface-container-high:   #423d39;
+  --surface-container-highest:#504a45;
+  --surface-dim:         #1a1714;
+
+  --on-background:       #f5f0e8;
+  --on-surface:          #f5f0e8;
+  --on-surface-variant:  #a8a29e;
+
+  --primary:             #fbbf24;
+  --primary-dim:         #f59e0b;
+  --primary-container:   #d97706;
+  --on-primary:          #1c1917;
+  --on-primary-container:#fef3c7;
+
+  --secondary:           #86efac;
+  --secondary-container: #15803d;
+  --on-secondary:        #052e16;
+  --on-secondary-container: #dcfce7;
+
+  --tertiary:            #ddd6fe;
+  --tertiary-container:  #7c3aed;
+  --on-tertiary-container:#ede9fe;
+
+  --error:               #fca5a5;
+  --error-container:     #dc2626;
+  --on-error-container:  #fef2f2;
+
+  --outline:             #78716c;
+  --outline-variant:     #57534e;
+
+  --card-border:         rgba(245, 240, 232, 0.08);
+  --card-shadow:         0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 14px rgba(0, 0, 0, 0.15);
+  --card-shadow-hover:   0 4px 20px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+
+  --accent-soft:         rgba(251, 191, 36, 0.1);
+  --accent-mid:          rgba(251, 191, 36, 0.18);
+
+  --amber-dark:          #fbbf24;
+  --amber-mid:           #f59e0b;
+  --amber-glow:          rgba(251, 191, 36, 0.15);
+  --amber-gradient:      linear-gradient(135deg, #fbbf24, #d97706);
+
+  --glass-bg:            rgba(26, 23, 20, 0.88);
+  --glass-border:        rgba(245, 240, 232, 0.08);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-primary);
+  background: var(--background);
+  min-height: 100vh;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Material Symbols base */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  font-size: 22px;
+  user-select: none;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 3px;
+}

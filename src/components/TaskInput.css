@@ -1,0 +1,225 @@
+.task-input-form { width: 100%; }
+
+.task-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 16px;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--card-shadow);
+  transition: border-color var(--t-smooth), box-shadow var(--t-smooth);
+}
+
+.task-input-wrapper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--card-shadow);
+}
+
+.input-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  color: var(--primary);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-primary);
+  font-size: 0.925rem;
+  color: var(--on-surface);
+  caret-color: var(--primary);
+}
+
+.task-input::placeholder { color: var(--outline); }
+
+.repeat-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 34px;
+  color: var(--outline);
+  background: var(--surface-container-low);
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-smooth);
+  flex-shrink: 0;
+}
+
+.repeat-toggle:hover {
+  color: var(--amber-mid);
+  border-color: var(--primary);
+  background: var(--accent-soft);
+}
+
+.repeat-toggle.active {
+  color: var(--amber-dark);
+  background: var(--amber-gradient);
+  border-color: rgba(120, 53, 15, 0.12);
+  box-shadow: 0 2px 8px var(--amber-glow);
+}
+
+.repeat-bolt {
+  font-size: 16px !important;
+  line-height: 1;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--r-md);
+  padding: 8px 18px;
+  color: var(--on-primary);
+  font-family: var(--font-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-bounce);
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px var(--amber-glow);
+}
+
+.add-btn:hover:not(:disabled) {
+  background: var(--primary-dim);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--amber-glow);
+}
+
+.add-btn:active:not(:disabled) { transform: translateY(0); }
+
+.add-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: var(--outline-variant);
+  box-shadow: none;
+}
+
+.add-btn-icon { font-size: 1.15rem; line-height: 1; font-weight: 300; }
+
+/* Extras row: color picker + reminder */
+.task-input-extras {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.color-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform var(--t-smooth), border-color var(--t-smooth);
+  flex-shrink: 0;
+  outline: none;
+}
+
+.color-dot[data-color=""] {
+  background: var(--outline-variant);
+  border-color: var(--card-border);
+}
+
+.color-dot[data-color="red"]    { background: #ef4444; }
+.color-dot[data-color="blue"]   { background: #3b82f6; }
+.color-dot[data-color="green"]  { background: #22c55e; }
+.color-dot[data-color="yellow"] { background: #eab308; }
+.color-dot[data-color="purple"] { background: #a855f7; }
+.color-dot[data-color="orange"] { background: #f97316; }
+
+.color-dot:hover { transform: scale(1.2); }
+
+.color-dot.active {
+  border-color: var(--on-surface);
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px var(--surface-container-lowest), 0 0 0 4px var(--on-surface);
+}
+
+/* Reminder picker */
+.reminder-picker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  min-height: 30px;
+  padding: 4px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface-container-low);
+  border: 1px solid var(--card-border);
+  cursor: pointer;
+  transition: border-color var(--t-smooth);
+}
+
+.reminder-picker:focus-within {
+  border-color: var(--primary);
+}
+
+.reminder-icon {
+  font-size: 16px !important;
+  color: var(--outline);
+}
+
+.reminder-time-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  width: 80px;
+}
+
+.reminder-clear {
+  background: none;
+  border: none;
+  color: var(--outline);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 2px;
+}
+
+.reminder-clear:hover { color: var(--error); }
+
+@media (max-width: 520px) {
+  .task-input-wrapper {
+    flex-wrap: wrap;
+  }
+
+  .task-input {
+    min-width: calc(100% - 40px);
+  }
+
+  .repeat-toggle {
+    margin-left: 32px;
+  }
+
+  .task-input-extras {
+    flex-wrap: wrap;
+  }
+}

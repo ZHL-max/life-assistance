@@ -1,0 +1,8 @@
+{
+  "appId": "com.buaa.lifeassistant",
+  "appName": "生活助手",
+  "webDir": "dist",
+  "server": {
+    "cleartext": true
+  }
+}

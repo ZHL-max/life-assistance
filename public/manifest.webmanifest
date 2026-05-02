@@ -1,0 +1,17 @@
+{
+  "name": "日常生活助手",
+  "short_name": "生活助手",
+  "description": "日常任务、长期目标、课程表和云端同步。",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#faf6f1",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/pika-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
