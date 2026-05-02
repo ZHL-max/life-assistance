@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "connector": "node server/index.js",
+    "start": "node server/index.js",
     "dev:all": "node server/dev-all.js",
     "build": "vite build",
     "lint": "eslint .",
