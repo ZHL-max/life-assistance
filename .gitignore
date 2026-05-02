@@ -16,6 +16,8 @@ data/buaa-session.json
 data/users/
 .tmp_ubaa
 android/
+.mcp.json
+.claude/
 
 # Editor directories and files
 .vscode/*
