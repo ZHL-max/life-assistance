@@ -98,7 +98,7 @@ export default function Schedule({ userId }) {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingWeek, setLoadingWeek] = useState(false)
-  const [buaaStatus, setBuaaStatus] = useState('未登录北航')
+  const [buaaStatus, setBuaaStatus] = useState('')
   const [buaaTerms, setBuaaTerms] = useState([])
   const [termWeeks, setTermWeeks] = useState([])
   const [termWeeksTerm, setTermWeeksTerm] = useState('')
@@ -325,7 +325,7 @@ export default function Schedule({ userId }) {
           <button className="schedule-icon-btn" onClick={() => moveWeek(-7)} disabled={isFirstTermWeek}>‹</button>
           <div>
           <h2>{selectedTermName || '课表'}</h2>
-          <p>{activeTermWeeks.length > 0 ? getWeekLabel(weekStart, activeTermWeeks) : '正在同步学期周次...'} · {buaaStatus}</p>
+          <p>{activeTermWeeks.length > 0 ? getWeekLabel(weekStart, activeTermWeeks) : '选择学期后自动同步'}</p>
         </div>
         <button className="schedule-icon-btn" onClick={() => moveWeek(7)} disabled={isLastTermWeek}>›</button>
       </div>
