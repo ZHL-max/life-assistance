@@ -326,27 +326,46 @@ export default function Schedule({ userId }) {
   }
 
   const moveWeek = offset => {
-    if (selectedWeekIndex < 0 || activeTermWeeks.length === 0) return
+    if (activeTermWeeks.length === 0) {
+      // 没有教学周数据时，直接按 7 天偏移
+      setWeekStart(current => addDays(current, offset > 0 ? 7 : -7))
+      return
+    }
 
-    const direction = offset > 0 ? 1 : -1
-    const nextIndex = Math.min(
-      Math.max(selectedWeekIndex + direction, 0),
-      activeTermWeeks.length - 1
-    )
-    const nextWeekStart = getWeekStartFromTermWeek(activeTermWeeks[nextIndex])
-    if (nextWeekStart) setWeekStart(nextWeekStart)
+    if (selectedWeekIndex >= 0) {
+      const direction = offset > 0 ? 1 : -1
+      const nextIndex = Math.min(
+        Math.max(selectedWeekIndex + direction, 0),
+        activeTermWeeks.length - 1
+      )
+      const nextWeekStart = getWeekStartFromTermWeek(activeTermWeeks[nextIndex])
+      if (nextWeekStart) setWeekStart(nextWeekStart)
+    } else {
+      // 当前周不在教学周列表中，找到最近的周
+      const direction = offset > 0 ? 1 : -1
+      const sorted = [...activeTermWeeks].sort((a, b) =>
+        String(a.startDate).localeCompare(String(b.startDate))
+      )
+      if (direction > 0) {
+        const next = sorted.find(w => String(w.startDate).slice(0, 10) > weekStart)
+        if (next) setWeekStart(String(next.startDate).slice(0, 10))
+      } else {
+        const prev = [...sorted].reverse().find(w => String(w.startDate).slice(0, 10) < weekStart)
+        if (prev) setWeekStart(String(prev.startDate).slice(0, 10))
+      }
+    }
   }
 
   return (
     <section className="schedule-app">
       <div className="schedule-topbar">
         <div className="schedule-title-row">
-          <button className="schedule-icon-btn" onClick={() => moveWeek(-7)} disabled={isFirstTermWeek}>‹</button>
+          <button className="schedule-icon-btn" onClick={() => moveWeek(-7)} disabled={activeTermWeeks.length > 0 && isFirstTermWeek}>‹</button>
           <div>
           <h2>{selectedTermName || '课表'}</h2>
           <p>{activeTermWeeks.length > 0 ? getWeekLabel(weekStart, activeTermWeeks) : '选择学期后自动同步'}</p>
         </div>
-        <button className="schedule-icon-btn" onClick={() => moveWeek(7)} disabled={isLastTermWeek}>›</button>
+        <button className="schedule-icon-btn" onClick={() => moveWeek(7)} disabled={activeTermWeeks.length > 0 && isLastTermWeek}>›</button>
       </div>
 
       <div className="schedule-login-strip">
