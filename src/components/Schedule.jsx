@@ -266,9 +266,7 @@ export default function Schedule({ userId }) {
 
     async function loadSelectedWeek() {
       try {
-        console.log('[Schedule] fetching week:', { selectedTerm, week: selectedWeek.serialNumber, userId })
         const schedule = await getBuaaWeeklySchedule(selectedTerm, selectedWeek.serialNumber, userId)
-        console.log('[Schedule] got schedule:', JSON.stringify(schedule).slice(0, 200))
         if (weekRequestRef.current !== requestId) return
 
         const parsedEvents = parseBeihangWeeklySchedule(
@@ -291,7 +289,6 @@ export default function Schedule({ userId }) {
         }
       } catch (error) {
         if (weekRequestRef.current !== requestId) return
-        console.error('[Schedule] fetch error:', error)
 
         // 优先用缓存数据，不过滤 source
         const fallbackEvents = cachedEventsRef.current
