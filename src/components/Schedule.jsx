@@ -266,7 +266,9 @@ export default function Schedule({ userId }) {
 
     async function loadSelectedWeek() {
       try {
+        console.log('[Schedule] fetching week:', { selectedTerm, week: selectedWeek.serialNumber, userId })
         const schedule = await getBuaaWeeklySchedule(selectedTerm, selectedWeek.serialNumber, userId)
+        console.log('[Schedule] got schedule:', JSON.stringify(schedule).slice(0, 200))
         if (weekRequestRef.current !== requestId) return
 
         const parsedEvents = parseBeihangWeeklySchedule(
@@ -289,15 +291,17 @@ export default function Schedule({ userId }) {
         }
       } catch (error) {
         if (weekRequestRef.current !== requestId) return
+        console.error('[Schedule] fetch error:', error)
 
-        const sourceTerm = toBuaaSourceTerm(selectedTerm)
+        // 优先用缓存数据，不过滤 source
         const fallbackEvents = cachedEventsRef.current
           .filter(event => weekDates.includes(event.eventDate))
-          .filter(event => String(event.source ?? '').includes(sourceTerm))
           .sort((a, b) => a.startSection - b.startSection)
         setWeekEvents(fallbackEvents)
         if (fallbackEvents.length === 0) {
           setMessage(`读取本周课表失败：${error.message}`)
+        } else {
+          console.warn('课表实时获取失败，使用缓存数据:', error.message)
         }
       } finally {
         if (weekRequestRef.current === requestId) setLoadingWeek(false)
