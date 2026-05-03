@@ -244,7 +244,16 @@ export default function Schedule({ userId }) {
 
   useEffect(() => {
     if (!selectedTerm || !selectedWeek) {
-      setWeekEvents([])
+      // BUAA 会话过期或未选择学期时，仍然显示已缓存的课程数据
+      const cached = cachedEventsRef.current
+      if (cached.length > 0) {
+        const fallbackEvents = cached
+          .filter(event => weekDates.includes(event.eventDate))
+          .sort((a, b) => a.startSection - b.startSection)
+        setWeekEvents(fallbackEvents)
+      } else {
+        setWeekEvents([])
+      }
       return
     }
 
