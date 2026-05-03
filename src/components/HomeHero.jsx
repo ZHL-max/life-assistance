@@ -17,10 +17,6 @@ export default function HomeHero({ total, doneCount, userName }) {
 
   return (
     <section className="home-hero">
-      <div className="home-brand">
-        <img className="home-mascot" src="/pika-icon.svg" alt="" aria-hidden="true" />
-        <span>日常生活助手</span>
-      </div>
       <p className="home-date">
         今天 · {MONTHS[now.getMonth()]}月{now.getDate()}日 {WEEKDAYS[now.getDay()]}
       </p>

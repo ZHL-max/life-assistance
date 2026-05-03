@@ -103,7 +103,7 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     setIsEditingReminder(true)
   }
 
-  const saveReminder = () => {
+  const saveReminder = async () => {
     const msg = editText.trim()
     const time = editTime
     saveDailyReminder(todayKey, msg, time)
@@ -111,7 +111,10 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     setReminderTime(time)
     setIsEditingReminder(false)
 
-    if (msg && time) {
+    if (msg && time && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission()
+      }
       scheduleReminderNotification(msg, time)
     }
   }
