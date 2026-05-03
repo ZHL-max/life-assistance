@@ -32,24 +32,29 @@ export function loginBuaa(username, password, options = {}) {
       password,
       captcha: options.captcha,
       clientId: options.clientId,
+      userId: options.userId,
     }),
   })
 }
 
-export function getBuaaStatus() {
-  return requestJson('/api/buaa/status')
+export function getBuaaStatus(userId) {
+  return requestJson(`/api/buaa/status?userId=${encodeURIComponent(userId)}`)
 }
 
-export function logoutBuaa() {
-  return requestJson('/api/buaa/logout', { method: 'POST' })
+export function logoutBuaa(userId) {
+  return requestJson('/api/buaa/logout', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  })
 }
 
-export function getBuaaTerms() {
-  return requestJson('/api/buaa/terms')
+export function getBuaaTerms(userId) {
+  return requestJson(`/api/buaa/terms?userId=${encodeURIComponent(userId)}`)
 }
 
-export function getBuaaWeeks(termCode) {
-  return requestJson(`/api/buaa/weeks?termCode=${encodeURIComponent(termCode)}`)
+export function getBuaaWeeks(termCode, userId) {
+  return requestJson(`/api/buaa/weeks?termCode=${encodeURIComponent(termCode)}&userId=${encodeURIComponent(userId)}`)
 }
 
 export function getBuaaSchedule(termCode, options = {}) {
@@ -58,6 +63,7 @@ export function getBuaaSchedule(termCode, options = {}) {
     termCode,
     campusCode: options.campusCode ?? '',
     type,
+    userId: options.userId,
   }
 
   if (type === 'week' && options.week !== undefined) {
@@ -71,6 +77,6 @@ export function getBuaaSchedule(termCode, options = {}) {
   })
 }
 
-export function getBuaaWeeklySchedule(termCode, week) {
-  return getBuaaSchedule(termCode, { type: 'week', week })
+export function getBuaaWeeklySchedule(termCode, week, userId) {
+  return getBuaaSchedule(termCode, { type: 'week', week, userId })
 }

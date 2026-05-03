@@ -191,10 +191,18 @@ async function loadByxtLoginPage(jar) {
 }
 
 export function createBuaaConnector({ dataDir }) {
-  const sessionFile = path.join(dataDir, 'buaa-session.json')
+  const usersDir = path.join(dataDir, 'users')
   const preLoginSessions = new Map()
 
-  async function rehydrateSessionFromCookie(cookie) {
+  function safeUserId(userId) {
+    return String(userId ?? 'guest').replace(/[^\w.-]/g, '_')
+  }
+
+  function userSessionFile(userId) {
+    return path.join(usersDir, safeUserId(userId), 'buaa-session.json')
+  }
+
+  async function rehydrateSessionFromCookie(cookie, userId) {
     const jar = new CookieJar(cookie)
     const homePageUrl = `${BUAA_BASE_URL}/jwapp/sys/homeapp/home/index.html?contextPath=/jwapp`
 
@@ -245,13 +253,13 @@ export function createBuaaConnector({ dataDir }) {
       return null
     }
 
-    await writeSession(jar.header())
+    await writeSession(jar.header(), userId)
     return jar.header()
   }
 
-  async function readSession() {
+  async function readSession(userId) {
     try {
-      const raw = await fs.readFile(sessionFile, 'utf8')
+      const raw = await fs.readFile(userSessionFile(userId), 'utf8')
       const session = JSON.parse(raw)
 
       return typeof session.cookie === 'string' && session.cookie.trim()
@@ -262,28 +270,29 @@ export function createBuaaConnector({ dataDir }) {
     }
   }
 
-  async function writeSession(cookie) {
-    await fs.mkdir(dataDir, { recursive: true })
+  async function writeSession(cookie, userId) {
+    const dir = path.dirname(userSessionFile(userId))
+    await fs.mkdir(dir, { recursive: true })
 
     const session = {
       cookie,
       savedAt: new Date().toISOString(),
     }
 
-    await fs.writeFile(sessionFile, `${JSON.stringify(session, null, 2)}\n`, 'utf8')
+    await fs.writeFile(userSessionFile(userId), `${JSON.stringify(session, null, 2)}\n`, 'utf8')
     return session
   }
 
-  async function clearSession() {
+  async function clearSession(userId) {
     try {
-      await fs.unlink(sessionFile)
+      await fs.unlink(userSessionFile(userId))
     } catch (error) {
       if (error.code !== 'ENOENT') throw error
     }
   }
 
-  async function buaaFetch(pathname, { method = 'GET', body } = {}) {
-    const session = await readSession()
+  async function buaaFetch(pathname, { method = 'GET', body, userId } = {}) {
+    const session = await readSession(userId)
 
     if (!session) {
       throw new Error('还没有保存北航登录 Cookie。')
@@ -323,20 +332,20 @@ export function createBuaaConnector({ dataDir }) {
         payload = JSON.parse(text)
       } catch {
         if (attempt === 0 && shouldTreatAsSessionExpired(text)) {
-          const refreshedCookie = await rehydrateSessionFromCookie(cookie).catch(() => null)
+          const refreshedCookie = await rehydrateSessionFromCookie(cookie, userId).catch(() => null)
           if (refreshedCookie) {
             cookie = refreshedCookie
             continue
           }
         }
-        await clearSession()
+        await clearSession(userId)
         throw new Error('北航登录状态已失效，请重新登录。')
       }
 
       if (payload && Object.hasOwn(payload, 'code') && String(payload.code) !== '0') {
         const message = payload.msg || payload.message || `北航接口返回异常 code=${payload.code}`
         if (attempt === 0 && isSessionExpiredMessage(message)) {
-          const refreshedCookie = await rehydrateSessionFromCookie(cookie).catch(() => null)
+          const refreshedCookie = await rehydrateSessionFromCookie(cookie, userId).catch(() => null)
           if (refreshedCookie) {
             cookie = refreshedCookie
             continue
@@ -344,7 +353,7 @@ export function createBuaaConnector({ dataDir }) {
         }
 
         if (isSessionExpiredMessage(message)) {
-          await clearSession()
+          await clearSession(userId)
           throw new Error('北航登录状态已失效，请重新登录。')
         }
 
@@ -395,7 +404,7 @@ export function createBuaaConnector({ dataDir }) {
     }
   }
 
-  async function loginWithPassword({ username, password, captcha, clientId }) {
+  async function loginWithPassword({ username, password, captcha, clientId, userId }) {
     const nextUsername = String(username ?? '').trim()
     const nextPassword = String(password ?? '')
 
@@ -504,7 +513,7 @@ export function createBuaaConnector({ dataDir }) {
       throw new Error(currentUser?.msg || '北航教务登录验证失败。')
     }
 
-    await writeSession(jar.header())
+    await writeSession(jar.header(), userId)
 
     return {
       ok: true,
@@ -513,14 +522,14 @@ export function createBuaaConnector({ dataDir }) {
   }
 
   return {
-    async saveSession(cookie) {
+    async saveSession(cookie, userId) {
       const nextCookie = String(cookie ?? '').trim()
 
       if (!nextCookie || !nextCookie.includes('=')) {
         throw new Error('Cookie 格式不正确。')
       }
 
-      await writeSession(nextCookie)
+      await writeSession(nextCookie, userId)
       return { ok: true }
     },
 
@@ -528,14 +537,14 @@ export function createBuaaConnector({ dataDir }) {
 
     loginWithPassword,
 
-    async getStatus() {
-      const session = await readSession()
+    async getStatus(userId) {
+      const session = await readSession(userId)
 
       if (!session) {
         return { connected: false }
       }
 
-      const currentUser = await buaaFetch(BUAA_CURRENT_USER_PATH)
+      const currentUser = await buaaFetch(BUAA_CURRENT_USER_PATH, { userId })
 
       return {
         connected: currentUser?.code === '0',
@@ -544,24 +553,24 @@ export function createBuaaConnector({ dataDir }) {
       }
     },
 
-    async logout() {
-      await clearSession()
+    async logout(userId) {
+      await clearSession(userId)
       return { ok: true }
     },
 
-    getTerms() {
-      return buaaFetch('/jwapp/sys/homeapp/api/home/student/schoolCalendars.do')
+    getTerms(userId) {
+      return buaaFetch('/jwapp/sys/homeapp/api/home/student/schoolCalendars.do', { userId })
     },
 
-    getWeeks(termCode) {
+    getWeeks(termCode, userId) {
       if (!termCode) {
         throw new Error('缺少 termCode。')
       }
 
-      return buaaFetch(`/jwapp/sys/homeapp/api/home/getTermWeeks.do?termCode=${encodeURIComponent(termCode)}`)
+      return buaaFetch(`/jwapp/sys/homeapp/api/home/getTermWeeks.do?termCode=${encodeURIComponent(termCode)}`, { userId })
     },
 
-    getSchedule({ termCode, campusCode = '', type = 'class', week = '' }) {
+    getSchedule({ termCode, campusCode = '', type = 'class', week = '', userId }) {
       if (!termCode) {
         throw new Error('缺少 termCode。')
       }
@@ -574,6 +583,7 @@ export function createBuaaConnector({ dataDir }) {
       return buaaFetch('/jwapp/sys/homeapp/api/home/student/getMyScheduleDetail.do', {
         method: 'POST',
         body: params.toString(),
+        userId,
       })
     },
   }

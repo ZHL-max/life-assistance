@@ -116,6 +116,7 @@ export default function Schedule({ userId }) {
         const loaded = await fetchScheduleEvents(userId)
         if (!ignore) {
           cachedEventsRef.current = loaded
+          saveLocalScheduleEvents(userId, loaded)
           setMessage('')
         }
       } catch (error) {
@@ -124,7 +125,7 @@ export default function Schedule({ userId }) {
           cachedEventsRef.current = localEvents
           setMessage(localEvents.length > 0
             ? '云端课程表暂不可用，已读取本机课程缓存。'
-            : `课程表读取失败：${error.message}`)
+            : `课程表暂不可用：请检查网络后刷新页面。`)
         }
       } finally {
         if (!ignore) setLoading(false)
@@ -133,12 +134,12 @@ export default function Schedule({ userId }) {
 
     async function loadBuaaStatus() {
       try {
-        const status = await getBuaaStatus()
+        const status = await getBuaaStatus(userId)
         if (ignore) return
 
         if (status.connected) {
           setBuaaStatus(`已登录：${status.user?.userName ?? status.user?.userId ?? '北航账号'}`)
-          const terms = await getBuaaTerms()
+          const terms = await getBuaaTerms(userId)
           if (ignore) return
 
           const nextTerms = terms.datas ?? []
@@ -179,7 +180,7 @@ export default function Schedule({ userId }) {
   const isLastTermWeek = selectedWeekIndex < 0 || selectedWeekIndex >= activeTermWeeks.length - 1
 
   const loadTerms = async () => {
-    const terms = await getBuaaTerms()
+    const terms = await getBuaaTerms(userId)
     const nextTerms = terms.datas ?? []
     const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
     setBuaaTerms(nextTerms)
@@ -199,7 +200,7 @@ export default function Schedule({ userId }) {
     if (!options.silent) setMessage('')
 
     try {
-      const weeks = await getBuaaWeeks(termCode)
+      const weeks = await getBuaaWeeks(termCode, userId)
       if (syncRequestRef.current !== requestId) return
 
       const weekList = weeks.datas ?? []
@@ -265,7 +266,7 @@ export default function Schedule({ userId }) {
 
     async function loadSelectedWeek() {
       try {
-        const schedule = await getBuaaWeeklySchedule(selectedTerm, selectedWeek.serialNumber)
+        const schedule = await getBuaaWeeklySchedule(selectedTerm, selectedWeek.serialNumber, userId)
         if (weekRequestRef.current !== requestId) return
 
         const parsedEvents = parseBeihangWeeklySchedule(

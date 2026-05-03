@@ -51,7 +51,7 @@ function readJsonBody(req) {
 async function handleBuaaRequest(req, res, url) {
   if (url.pathname === '/api/buaa/session' && req.method === 'POST') {
     const payload = await readJsonBody(req)
-    sendJson(res, 200, await connector.saveSession(payload.cookie))
+    sendJson(res, 200, await connector.saveSession(payload.cookie, payload.userId))
     return
   }
 
@@ -85,22 +85,26 @@ async function handleBuaaRequest(req, res, url) {
   }
 
   if (url.pathname === '/api/buaa/status' && req.method === 'GET') {
-    sendJson(res, 200, await connector.getStatus())
+    const userId = url.searchParams.get('userId')
+    sendJson(res, 200, await connector.getStatus(userId))
     return
   }
 
   if (url.pathname === '/api/buaa/logout' && req.method === 'POST') {
-    sendJson(res, 200, await connector.logout())
+    const payload = await readJsonBody(req)
+    sendJson(res, 200, await connector.logout(payload.userId))
     return
   }
 
   if (url.pathname === '/api/buaa/terms' && req.method === 'GET') {
-    sendJson(res, 200, await connector.getTerms())
+    const userId = url.searchParams.get('userId')
+    sendJson(res, 200, await connector.getTerms(userId))
     return
   }
 
   if (url.pathname === '/api/buaa/weeks' && req.method === 'GET') {
-    sendJson(res, 200, await connector.getWeeks(url.searchParams.get('termCode')))
+    const userId = url.searchParams.get('userId')
+    sendJson(res, 200, await connector.getWeeks(url.searchParams.get('termCode'), userId))
     return
   }
 

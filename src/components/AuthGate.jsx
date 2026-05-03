@@ -70,6 +70,7 @@ export default function AuthGate({ children }) {
       const result = await loginBuaa(username.trim(), password, {
         captcha,
         clientId: preLogin?.clientId,
+        userId: username.trim(),
       })
       setPassword('')
       setCaptcha('')
@@ -96,7 +97,8 @@ export default function AuthGate({ children }) {
   }
 
   const handleSignOut = async () => {
-    await logoutBuaa().catch(() => {})
+    const currentUserId = session?.user?.id
+    await logoutBuaa(currentUserId).catch(() => {})
     clearLocalSession()
     setSession(null)
     setUsername('')
