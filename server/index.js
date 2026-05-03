@@ -62,7 +62,25 @@ async function handleBuaaRequest(req, res, url) {
 
   if (url.pathname === '/api/buaa/login' && req.method === 'POST') {
     const payload = await readJsonBody(req)
-    sendJson(res, 200, await connector.loginWithPassword(payload))
+    const MAX_ATTEMPTS = 2
+    let lastError = null
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        sendJson(res, 200, await connector.loginWithPassword(payload))
+        return
+      } catch (error) {
+        lastError = error
+        const msg = String(error?.message ?? '')
+        const isPermanent = msg.includes('请填写学号和密码')
+          || msg.includes('账号或密码错误')
+          || msg.includes('验证码')
+        if (isPermanent || attempt === MAX_ATTEMPTS - 1) break
+        await new Promise(r => setTimeout(r, 1200))
+      }
+    }
+
+    sendJson(res, 400, { error: lastError?.message || '登录失败，请重试。' })
     return
   }
 

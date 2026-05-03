@@ -77,7 +77,11 @@ export default function AuthGate({ children }) {
       saveLocalSession(newSession)
       setSession(newSession)
     } catch (error) {
-      setMessage(error.message)
+      const msg = error.message || ''
+      const isCredentialError = msg.includes('账号或密码') || msg.includes('验证码')
+      setMessage(isCredentialError ? msg : `${msg || '网络繁忙'}，请检查网络后重试。`)
+      // 短暂延迟再加载新的 preload，避免频繁请求北航 SSO
+      await new Promise(r => setTimeout(r, 800))
       const preload = await preloadBuaaLogin().catch(() => null)
       if (preload) setPreLogin(preload)
     } finally {
