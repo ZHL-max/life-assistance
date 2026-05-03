@@ -277,15 +277,23 @@ export default function Schedule({ userId }) {
 
         setWeekEvents(parsedEvents)
 
-        try {
-          const saved = await importScheduleEvents(userId, parsedEvents, {
-            replaceRangeStart: weekStart,
-            replaceRangeEnd: weekEnd,
-          })
-          cachedEventsRef.current = saved
-          saveLocalScheduleEvents(userId, saved)
-        } catch {
-          // The UI follows BUAA's live weekly response. Persistence is best-effort.
+        if (parsedEvents.length > 0) {
+          try {
+            const saved = await importScheduleEvents(userId, parsedEvents, {
+              replaceRangeStart: weekStart,
+              replaceRangeEnd: weekEnd,
+            })
+            cachedEventsRef.current = saved
+            saveLocalScheduleEvents(userId, saved)
+          } catch {
+            // The UI follows BUAA's live weekly response. Persistence is best-effort.
+          }
+        } else {
+          // BUAA 返回空数据时，使用已缓存的课程，不覆盖云端
+          const cached = cachedEventsRef.current
+            .filter(event => weekDates.includes(event.eventDate))
+            .sort((a, b) => a.startSection - b.startSection)
+          if (cached.length > 0) setWeekEvents(cached)
         }
       } catch (error) {
         if (weekRequestRef.current !== requestId) return
