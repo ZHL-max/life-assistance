@@ -189,7 +189,7 @@ export async function parseBeihangApiScheduleFile(file, semesterStartDate) {
 }
 
 export function parseBeihangApiSchedule(payload, semesterStartDate) {
-  const courses = payload?.datas?.arrangedList ?? []
+  const courses = payload?.datas?.list ?? payload?.datas?.arrangedList ?? []
   const events = []
 
   for (const course of courses) {
@@ -291,7 +291,7 @@ export function parseBeihangApiScheduleWithTermWeeks(payload, termWeeksPayload) 
       normalizeText(week.startDate).slice(0, 10),
     ])
   )
-  const courses = payload?.datas?.arrangedList ?? []
+  const courses = payload?.datas?.list ?? payload?.datas?.arrangedList ?? []
   const events = []
 
   for (const course of courses) {
