@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -202,6 +203,7 @@ export function createBuaaConnector({ dataDir }) {
   const usersDir = path.join(dataDir, 'users')
   const preLoginSessions = new Map()
   const PRELOGIN_TTL = 5 * 60 * 1000 // 5 minutes
+  const credentialKeyPath = path.join(dataDir, '.credential-key')
 
   // Clean up expired preLogin sessions periodically
   setInterval(() => {
@@ -212,6 +214,63 @@ export function createBuaaConnector({ dataDir }) {
       }
     }
   }, 60_000)
+
+  async function getCredentialKey() {
+    try {
+      return await fs.readFile(credentialKeyPath, 'utf8')
+    } catch {
+      const key = crypto.randomBytes(32).toString('hex')
+      await fs.mkdir(path.dirname(credentialKeyPath), { recursive: true })
+      await fs.writeFile(credentialKeyPath, key, 'utf8')
+      return key
+    }
+  }
+
+  async function encryptText(plaintext) {
+    const key = await getCredentialKey()
+    const iv = crypto.randomBytes(16)
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key, 'hex'), iv)
+    let encrypted = cipher.update(plaintext, 'utf8', 'hex')
+    encrypted += cipher.final('hex')
+    return `${iv.toString('hex')}:${encrypted}`
+  }
+
+  async function decryptText(ciphertext) {
+    const key = await getCredentialKey()
+    const [ivHex, encrypted] = ciphertext.split(':')
+    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key, 'hex'), Buffer.from(ivHex, 'hex'))
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    return decrypted
+  }
+
+  function userCredentialFile(userId) {
+    return path.join(usersDir, safeUserId(userId), 'credential.enc')
+  }
+
+  async function saveCredentials(userId, password) {
+    const dir = path.dirname(userCredentialFile(userId))
+    await fs.mkdir(dir, { recursive: true })
+    const encrypted = await encryptText(password)
+    await fs.writeFile(userCredentialFile(userId), encrypted, 'utf8')
+  }
+
+  async function readCredentials(userId) {
+    try {
+      const encrypted = await fs.readFile(userCredentialFile(userId), 'utf8')
+      return await decryptText(encrypted.trim())
+    } catch {
+      return null
+    }
+  }
+
+  async function clearCredentials(userId) {
+    try {
+      await fs.unlink(userCredentialFile(userId))
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+  }
 
   function safeUserId(userId) {
     return String(userId ?? 'guest').replace(/[^\w.-]/g, '_')
@@ -358,10 +417,18 @@ export function createBuaaConnector({ dataDir }) {
       try {
         payload = JSON.parse(text)
       } catch {
-        if (attempt === 0 && shouldTreatAsSessionExpired(text)) {
-          const refreshedCookie = await rehydrateSessionFromCookie(cookie, userId).catch(() => null)
-          if (refreshedCookie) {
-            cookie = refreshedCookie
+        if (attempt === 0) {
+          if (shouldTreatAsSessionExpired(text)) {
+            const refreshedCookie = await rehydrateSessionFromCookie(cookie, userId).catch(() => null)
+            if (refreshedCookie) {
+              cookie = refreshedCookie
+              continue
+            }
+          }
+          // 尝试自动重新登录
+          const reloginSession = await autoRelogin(userId).catch(() => null)
+          if (reloginSession?.cookie) {
+            cookie = reloginSession.cookie
             continue
           }
         }
@@ -375,6 +442,12 @@ export function createBuaaConnector({ dataDir }) {
           const refreshedCookie = await rehydrateSessionFromCookie(cookie, userId).catch(() => null)
           if (refreshedCookie) {
             cookie = refreshedCookie
+            continue
+          }
+          // 尝试自动重新登录
+          const reloginSession = await autoRelogin(userId).catch(() => null)
+          if (reloginSession?.cookie) {
+            cookie = reloginSession.cookie
             continue
           }
         }
@@ -391,6 +464,18 @@ export function createBuaaConnector({ dataDir }) {
     }
 
     throw new Error('北航接口请求失败，请稍后重试。')
+  }
+
+  async function autoRelogin(userId) {
+    const password = await readCredentials(userId)
+    if (!password) return null
+
+    try {
+      const result = await loginWithPassword({ username: userId, password, userId })
+      return result.ok ? await readSession(userId) : null
+    } catch {
+      return null
+    }
   }
 
   async function createPreLogin() {
@@ -542,6 +627,9 @@ export function createBuaaConnector({ dataDir }) {
 
     await writeSession(jar.header(), userId)
 
+    // 保存加密的凭据，用于会话过期后自动重新登录
+    await saveCredentials(userId, nextPassword).catch(() => {})
+
     return {
       ok: true,
       user: currentUser.datas,
@@ -582,6 +670,15 @@ export function createBuaaConnector({ dataDir }) {
 
     async logout(userId) {
       await clearSession(userId)
+      await clearCredentials(userId).catch(() => {})
+      return { ok: true }
+    },
+
+    async relogin(userId) {
+      const session = await autoRelogin(userId)
+      if (!session) {
+        throw new Error('自动重新登录失败，请手动重新登录。')
+      }
       return { ok: true }
     },
 

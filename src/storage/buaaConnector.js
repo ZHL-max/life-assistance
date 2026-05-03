@@ -49,6 +49,14 @@ export function logoutBuaa(userId) {
   })
 }
 
+export function reloginBuaa(userId) {
+  return requestJson('/api/buaa/relogin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId }),
+  })
+}
+
 export function getBuaaTerms(userId) {
   return requestJson(`/api/buaa/terms?userId=${encodeURIComponent(userId)}`)
 }

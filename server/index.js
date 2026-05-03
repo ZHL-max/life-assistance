@@ -103,6 +103,12 @@ async function handleBuaaRequest(req, res, url) {
     return
   }
 
+  if (url.pathname === '/api/buaa/relogin' && req.method === 'POST') {
+    const payload = await readJsonBody(req)
+    sendJson(res, 200, await connector.relogin(payload.userId))
+    return
+  }
+
   if (url.pathname === '/api/buaa/terms' && req.method === 'GET') {
     const userId = url.searchParams.get('userId')
     sendJson(res, 200, await connector.getTerms(userId))

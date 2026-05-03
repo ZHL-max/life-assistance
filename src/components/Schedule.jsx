@@ -4,6 +4,7 @@ import {
   getBuaaTerms,
   getBuaaWeeklySchedule,
   getBuaaWeeks,
+  reloginBuaa,
 } from '../storage/buaaConnector'
 import { fetchScheduleEvents, importScheduleEvents } from '../storage/cloudSchedule'
 import { loadLocalScheduleEvents, saveLocalScheduleEvents } from '../storage/localSchedule'
@@ -175,7 +176,18 @@ export default function Schedule({ userId }) {
       setSelectedTerm(prev => prev || current)
       setMessage('')
     } catch {
-      setMessage('同步失败，北航登录已过期，请前往首页重新登录。')
+      // 服务端自动重新登录也失败了，尝试显式重新登录
+      try {
+        await reloginBuaa(userId)
+        const terms = await getBuaaTerms(userId)
+        const nextTerms = terms.datas ?? []
+        const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
+        setBuaaTerms(nextTerms)
+        setSelectedTerm(prev => prev || current)
+        setMessage('已自动重新登录北航。')
+      } catch {
+        setMessage('自动重新登录失败，请前往首页手动登录。')
+      }
     } finally {
       setLoading(false)
     }
