@@ -1,23 +1,23 @@
 const KEY_PREFIX = 'dailyReminder_'
 
-export function loadDailyReminder(dateKey) {
+export function loadDailyReminders(dateKey) {
   try {
     const raw = localStorage.getItem(KEY_PREFIX + dateKey)
-    if (!raw) return { message: '', time: '' }
+    if (!raw) return []
     const parsed = JSON.parse(raw)
-    return { message: parsed.message || '', time: parsed.time || '' }
+    if (Array.isArray(parsed)) return parsed
+    // 兼容旧格式 {message, time}
+    if (parsed.message) return [{ id: '1', message: parsed.message, time: parsed.time || '' }]
+    return []
   } catch {
-    return { message: '', time: '' }
+    return []
   }
 }
 
-export function saveDailyReminder(dateKey, message, time) {
+export function saveDailyReminders(dateKey, reminders) {
   try {
-    if (message.trim()) {
-      localStorage.setItem(KEY_PREFIX + dateKey, JSON.stringify({
-        message: message.trim(),
-        time: time || '',
-      }))
+    if (reminders.length > 0) {
+      localStorage.setItem(KEY_PREFIX + dateKey, JSON.stringify(reminders))
     } else {
       localStorage.removeItem(KEY_PREFIX + dateKey)
     }

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { fetchLongTasks } from '../storage/cloudLongTasks'
-import { loadDailyReminder, saveDailyReminder } from '../storage/dailyReminder'
+import { loadDailyReminders, saveDailyReminders } from '../storage/dailyReminder'
 import './Dashboard.css'
 
 function getTodayKey() {
@@ -11,55 +11,65 @@ function getTodayKey() {
   return `${year}-${month}-${day}`
 }
 
-let reminderTimer = null
+const reminderTimers = new Map()
 
-function scheduleReminderNotification(message, time) {
-  if (reminderTimer) {
-    clearTimeout(reminderTimer)
-    reminderTimer = null
+function clearAllReminderTimers() {
+  for (const timer of reminderTimers.values()) {
+    clearTimeout(timer)
   }
-  if (!message || !time || !('Notification' in window)) return
+  reminderTimers.clear()
+}
 
-  const [hh, mm] = time.split(':').map(Number)
-  const target = new Date()
-  target.setHours(hh, mm, 0, 0)
-  const delay = target.getTime() - Date.now()
+function scheduleAllReminders(reminders) {
+  clearAllReminderTimers()
+  if (!('Notification' in window)) return
 
-  if (delay <= 0) return
+  for (const r of reminders) {
+    if (!r.message || !r.time) continue
 
-  reminderTimer = setTimeout(async () => {
-    reminderTimer = null
-    try {
-      const permission = Notification.permission === 'default'
-        ? await Notification.requestPermission()
-        : Notification.permission
-      if (permission !== 'granted') return
-      new Notification('今日提醒', {
-        body: message,
-        icon: '/pika-icon.svg',
-        tag: 'daily-reminder',
-      })
-    } catch {
-      // ignore
-    }
-  }, delay)
+    const [hh, mm] = r.time.split(':').map(Number)
+    const target = new Date()
+    target.setHours(hh, mm, 0, 0)
+    const delay = target.getTime() - Date.now()
+
+    if (delay <= 0) continue
+
+    const timer = setTimeout(async () => {
+      reminderTimers.delete(r.id)
+      try {
+        const permission = Notification.permission === 'granted'
+          ? 'granted'
+          : await Notification.requestPermission()
+        if (permission !== 'granted') return
+        new Notification('今日提醒', {
+          body: r.message,
+          icon: '/pika-icon.svg',
+          tag: `reminder-${r.id}`,
+        })
+      } catch {
+        // ignore
+      }
+    }, delay)
+
+    reminderTimers.set(r.id, timer)
+  }
 }
 
 export default function Dashboard({ userId, tasks, onNavigate }) {
   const [longTasks, setLongTasks] = useState([])
-  const [reminderMsg, setReminderMsg] = useState('')
-  const [reminderTime, setReminderTime] = useState('')
-  const [isEditingReminder, setIsEditingReminder] = useState(false)
+  const [reminders, setReminders] = useState([])
+  const [isAdding, setIsAdding] = useState(false)
   const [editText, setEditText] = useState('')
   const [editTime, setEditTime] = useState('')
-  const timerRef = useRef(reminderTimer)
+  const [notiPermission, setNotiPermission] = useState(
+    'Notification' in window ? Notification.permission : 'denied'
+  )
 
   const todayKey = getTodayKey()
 
   useEffect(() => {
     let ignore = false
-
-    async function loadLongTasks() {
+    async function load() {
       try {
         const loaded = await fetchLongTasks(userId)
         if (!ignore) setLongTasks(loaded)
@@ -67,62 +77,59 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
         if (!ignore) setLongTasks([])
       }
     }
-
-    loadLongTasks()
-
-    return () => {
-      ignore = true
-    }
+    load()
+    return () => { ignore = true }
   }, [userId])
 
   useEffect(() => {
-    const { message, time } = loadDailyReminder(todayKey)
-    setReminderMsg(message)
-    setReminderTime(time)
-    if (message && time) {
-      scheduleReminderNotification(message, time)
+    const loaded = loadDailyReminders(todayKey)
+    setReminders(loaded)
+    if (loaded.length > 0) {
+      scheduleAllReminders(loaded)
     }
+    return () => clearAllReminderTimers()
   }, [todayKey])
-
-  useEffect(() => {
-    return () => {
-      if (reminderTimer) {
-        clearTimeout(reminderTimer)
-        reminderTimer = null
-      }
-    }
-  }, [])
 
   const todayTasks = tasks.filter(task => task.date === todayKey)
   const todayPending = todayTasks.filter(task => !task.done).length
   const activeLongTasks = longTasks.filter(task => task.status !== 'done')
 
-  const startEditReminder = () => {
-    setEditText(reminderMsg)
-    setEditTime(reminderTime)
-    setIsEditingReminder(true)
+  const requestNotiPermission = async () => {
+    if (!('Notification' in window)) return
+    const result = await Notification.requestPermission()
+    setNotiPermission(result)
   }
 
-  const saveReminder = async () => {
+  const handleAdd = async () => {
     const msg = editText.trim()
-    const time = editTime
-    saveDailyReminder(todayKey, msg, time)
-    setReminderMsg(msg)
-    setReminderTime(time)
-    setIsEditingReminder(false)
+    if (!msg) return
 
-    if (msg && time && 'Notification' in window) {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission()
-      }
-      scheduleReminderNotification(msg, time)
+    if (notiPermission === 'default') {
+      await requestNotiPermission()
     }
-  }
 
-  const cancelEdit = () => {
+    const newReminder = {
+      id: crypto.randomUUID(),
+      message: msg,
+      time: editTime || '',
+    }
+    const next = [...reminders, newReminder]
+    setReminders(next)
+    saveDailyReminders(todayKey, next)
+    scheduleAllReminders(next)
     setEditText('')
     setEditTime('')
-    setIsEditingReminder(false)
+    setIsAdding(false)
+  }
+
+  const handleDelete = (id) => {
+    const next = reminders.filter(r => r.id !== id)
+    setReminders(next)
+    saveDailyReminders(todayKey, next)
+    if (reminderTimers.has(id)) {
+      clearTimeout(reminderTimers.get(id))
+      reminderTimers.delete(id)
+    }
   }
 
   return (
@@ -132,14 +139,47 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
         <div className="reminder-card-header">
           <span className="material-symbols-outlined">notifications_active</span>
           <strong>今日提醒</strong>
+          {!isAdding && (
+            <button className="reminder-add-btn" onClick={() => setIsAdding(true)} aria-label="添加提醒">
+              <span className="material-symbols-outlined">add</span>
+            </button>
+          )}
         </div>
-        {isEditingReminder ? (
+
+        {/* 提醒列表 */}
+        {reminders.length > 0 && (
+          <div className="reminder-list">
+            {reminders.map(r => (
+              <div key={r.id} className="reminder-item">
+                <div className="reminder-item-body">
+                  <p className="reminder-text">{r.message}</p>
+                  {r.time && (
+                    <span className="reminder-time-badge">
+                      <span className="material-symbols-outlined">alarm</span>
+                      {r.time}
+                    </span>
+                  )}
+                </div>
+                <button
+                  className="reminder-delete-btn"
+                  onClick={() => handleDelete(r.id)}
+                  aria-label="删除提醒"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 添加表单 */}
+        {isAdding ? (
           <div className="reminder-edit">
             <textarea
               className="reminder-input"
               value={editText}
               onChange={e => setEditText(e.target.value)}
-              placeholder="输入今天的提醒消息..."
+              placeholder="输入提醒消息..."
               rows={2}
               autoFocus
             />
@@ -152,38 +192,25 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
                 onChange={e => setEditTime(e.target.value)}
               />
               {editTime && (
-                <button
-                  type="button"
-                  className="reminder-time-clear"
-                  onClick={() => setEditTime('')}
-                  aria-label="清除时间"
-                >
-                  ×
-                </button>
+                <button type="button" className="reminder-time-clear" onClick={() => setEditTime('')}>×</button>
               )}
             </div>
             <div className="reminder-edit-actions">
-              <button className="reminder-btn cancel" onClick={cancelEdit}>取消</button>
-              <button className="reminder-btn save" onClick={saveReminder}>保存</button>
+              <button className="reminder-btn cancel" onClick={() => { setIsAdding(false); setEditText(''); setEditTime('') }}>取消</button>
+              <button className="reminder-btn save" onClick={handleAdd} disabled={!editText.trim()}>添加</button>
             </div>
           </div>
         ) : (
-          <div className="reminder-display" onClick={startEditReminder}>
-            {reminderMsg ? (
-              <>
-                <p className="reminder-text">{reminderMsg}</p>
-                {reminderTime && (
-                  <span className="reminder-time-badge">
-                    <span className="material-symbols-outlined">alarm</span>
-                    {reminderTime}
-                  </span>
-                )}
-              </>
-            ) : (
-              <p className="reminder-placeholder">点击设置今日提醒</p>
-            )}
-            <span className="material-symbols-outlined reminder-edit-icon">edit</span>
-          </div>
+          reminders.length === 0 && (
+            <p className="reminder-placeholder" onClick={() => setIsAdding(true)}>点击添加今日提醒</p>
+          )
+        )}
+
+        {/* 通知权限提示 */}
+        {notiPermission === 'denied' && (
+          <p className="reminder-permission-hint">
+            通知权限已关闭，请在浏览器设置中允许通知才能收到提醒。
+          </p>
         )}
       </div>
 
