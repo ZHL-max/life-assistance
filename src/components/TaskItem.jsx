@@ -119,12 +119,6 @@ export default function TaskItem({ task, onToggle, onDelete, onEdit, onPin, onSt
       ) : (
         <span className="task-text" onDoubleClick={startEditing}>
           {task.text}
-          {task.reminderTime && (
-            <span className="reminder-badge">
-              <span className="material-symbols-outlined">alarm</span>
-              {task.reminderTime}
-            </span>
-          )}
         </span>
       )}
 

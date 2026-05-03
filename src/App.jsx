@@ -23,7 +23,6 @@ import {
   stopDailyRepeat,
 } from './storage/tasks'
 import { fetchCloudTasks, replaceCloudTasks } from './storage/cloudTasks'
-import { scheduleReminders } from './utils/reminderManager'
 import './App.css'
 
 function TaskApp({ session, onSignOut }) {
@@ -138,14 +137,6 @@ function TaskApp({ session, onSignOut }) {
 
     saveLocalTasks(allTasks, userId)
   }, [allTasks, storageReady, userId])
-
-  useEffect(() => {
-    if (!storageReady) return
-    const todayKey = getTodayKey()
-    const todayTasks = allTasks.filter(t => t.date === todayKey && !t.done && t.reminderTime)
-    if (todayTasks.length === 0) return
-    scheduleReminders(todayTasks)
-  }, [allTasks, storageReady])
 
   const updateTasks = useCallback((updater) => {
     setAllTasks(prev => {

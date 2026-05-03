@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchLongTasks } from '../storage/cloudLongTasks'
 import { loadDailyReminder, saveDailyReminder } from '../storage/dailyReminder'
 import './Dashboard.css'
@@ -11,11 +11,48 @@ function getTodayKey() {
   return `${year}-${month}-${day}`
 }
 
+let reminderTimer = null
+
+function scheduleReminderNotification(message, time) {
+  if (reminderTimer) {
+    clearTimeout(reminderTimer)
+    reminderTimer = null
+  }
+  if (!message || !time || !('Notification' in window)) return
+
+  const [hh, mm] = time.split(':').map(Number)
+  const target = new Date()
+  target.setHours(hh, mm, 0, 0)
+  const delay = target.getTime() - Date.now()
+
+  if (delay <= 0) return
+
+  reminderTimer = setTimeout(async () => {
+    reminderTimer = null
+    try {
+      const permission = Notification.permission === 'default'
+        ? await Notification.requestPermission()
+        : Notification.permission
+      if (permission !== 'granted') return
+      new Notification('今日提醒', {
+        body: message,
+        icon: '/pika-icon.svg',
+        tag: 'daily-reminder',
+      })
+    } catch {
+      // ignore
+    }
+  }, delay)
+}
+
 export default function Dashboard({ userId, tasks, onNavigate }) {
   const [longTasks, setLongTasks] = useState([])
   const [reminderMsg, setReminderMsg] = useState('')
+  const [reminderTime, setReminderTime] = useState('')
   const [isEditingReminder, setIsEditingReminder] = useState(false)
   const [editText, setEditText] = useState('')
+  const [editTime, setEditTime] = useState('')
+  const timerRef = useRef(reminderTimer)
 
   const todayKey = getTodayKey()
 
@@ -39,8 +76,22 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
   }, [userId])
 
   useEffect(() => {
-    setReminderMsg(loadDailyReminder(todayKey))
+    const { message, time } = loadDailyReminder(todayKey)
+    setReminderMsg(message)
+    setReminderTime(time)
+    if (message && time) {
+      scheduleReminderNotification(message, time)
+    }
   }, [todayKey])
+
+  useEffect(() => {
+    return () => {
+      if (reminderTimer) {
+        clearTimeout(reminderTimer)
+        reminderTimer = null
+      }
+    }
+  }, [])
 
   const todayTasks = tasks.filter(task => task.date === todayKey)
   const todayPending = todayTasks.filter(task => !task.done).length
@@ -48,42 +99,26 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
 
   const startEditReminder = () => {
     setEditText(reminderMsg)
+    setEditTime(reminderTime)
     setIsEditingReminder(true)
   }
 
   const saveReminder = () => {
     const msg = editText.trim()
-    saveDailyReminder(todayKey, msg)
+    const time = editTime
+    saveDailyReminder(todayKey, msg, time)
     setReminderMsg(msg)
+    setReminderTime(time)
     setIsEditingReminder(false)
 
-    if (msg && 'Notification' in window) {
-      const scheduleNotification = async () => {
-        try {
-          const permission = Notification.permission === 'default'
-            ? await Notification.requestPermission()
-            : Notification.permission
-
-          if (permission !== 'granted') return
-
-          // 通知将在 1 秒后触发，让用户看到保存效果
-          setTimeout(() => {
-            new Notification('今日提醒', {
-              body: msg,
-              icon: '/pika-icon.svg',
-              tag: 'daily-reminder',
-            })
-          }, 1000)
-        } catch {
-          // ignore
-        }
-      }
-      scheduleNotification()
+    if (msg && time) {
+      scheduleReminderNotification(msg, time)
     }
   }
 
   const cancelEdit = () => {
     setEditText('')
+    setEditTime('')
     setIsEditingReminder(false)
   }
 
@@ -105,6 +140,25 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
               rows={2}
               autoFocus
             />
+            <div className="reminder-time-row">
+              <span className="material-symbols-outlined reminder-time-icon">alarm</span>
+              <input
+                type="time"
+                className="reminder-time-input"
+                value={editTime}
+                onChange={e => setEditTime(e.target.value)}
+              />
+              {editTime && (
+                <button
+                  type="button"
+                  className="reminder-time-clear"
+                  onClick={() => setEditTime('')}
+                  aria-label="清除时间"
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <div className="reminder-edit-actions">
               <button className="reminder-btn cancel" onClick={cancelEdit}>取消</button>
               <button className="reminder-btn save" onClick={saveReminder}>保存</button>
@@ -113,7 +167,15 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
         ) : (
           <div className="reminder-display" onClick={startEditReminder}>
             {reminderMsg ? (
-              <p className="reminder-text">{reminderMsg}</p>
+              <>
+                <p className="reminder-text">{reminderMsg}</p>
+                {reminderTime && (
+                  <span className="reminder-time-badge">
+                    <span className="material-symbols-outlined">alarm</span>
+                    {reminderTime}
+                  </span>
+                )}
+              </>
             ) : (
               <p className="reminder-placeholder">点击设置今日提醒</p>
             )}

@@ -35,6 +35,7 @@
   gap: 8px;
   cursor: pointer;
   padding: 6px 0;
+  flex-wrap: wrap;
 }
 
 .reminder-text {
@@ -56,6 +57,22 @@
   font-size: 18px;
   color: var(--outline);
   flex-shrink: 0;
+}
+
+.reminder-time-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--amber-dark);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+}
+
+.reminder-time-badge .material-symbols-outlined {
+  font-size: 14px;
 }
 
 .reminder-edit {
@@ -80,6 +97,43 @@
 
 .reminder-input:focus {
   border-color: var(--amber-dark);
+}
+
+.reminder-time-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reminder-time-icon {
+  font-size: 20px;
+  color: var(--outline);
+  flex-shrink: 0;
+}
+
+.reminder-time-input {
+  padding: 6px 8px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--r-sm);
+  background: var(--surface-container-low);
+  color: var(--on-surface);
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.reminder-time-input:focus {
+  border-color: var(--amber-dark);
+}
+
+.reminder-time-clear {
+  border: none;
+  background: none;
+  color: var(--outline);
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
 }
 
 .reminder-edit-actions {

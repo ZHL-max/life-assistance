@@ -15,16 +15,14 @@ export default function TaskInput({ onAdd }) {
   const [value, setValue] = useState('')
   const [repeatDaily, setRepeatDaily] = useState(false)
   const [color, setColor] = useState('')
-  const [reminderTime, setReminderTime] = useState('')
   const inputRef = useRef(null)
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!value.trim()) return
-    onAdd(value, { repeatDaily, color, reminderTime })
+    onAdd(value, { repeatDaily, color })
     setValue('')
     setColor('')
-    setReminderTime('')
     inputRef.current?.focus()
   }
 
@@ -78,26 +76,6 @@ export default function TaskInput({ onAdd }) {
             />
           ))}
         </div>
-
-        <label className="reminder-picker">
-          <span className="material-symbols-outlined reminder-icon">alarm</span>
-          <input
-            type="time"
-            value={reminderTime}
-            onChange={e => setReminderTime(e.target.value)}
-            className="reminder-time-input"
-          />
-          {reminderTime && (
-            <button
-              type="button"
-              className="reminder-clear"
-              onClick={() => setReminderTime('')}
-              aria-label="清除提醒时间"
-            >
-              ×
-            </button>
-          )}
-        </label>
       </div>
     </form>
   )
