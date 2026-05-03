@@ -165,6 +165,17 @@ async function handleAppDataRequest(req, res, url) {
     return
   }
 
+  if (url.pathname === '/api/app/reminders' && req.method === 'GET') {
+    sendJson(res, 200, await appData.getReminders(userId))
+    return
+  }
+
+  if (url.pathname === '/api/app/reminders' && req.method === 'PUT') {
+    const payload = await readJsonBody(req)
+    sendJson(res, 200, await appData.saveReminders(userId, payload.reminders))
+    return
+  }
+
   sendJson(res, 404, { error: '未知的 App 数据接口。' })
 }
 

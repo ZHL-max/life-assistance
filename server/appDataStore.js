@@ -144,5 +144,13 @@ export function createAppDataStore({ dataDir }) {
       ))
       return writeJson(userId, 'long-tasks.json', next)
     },
+
+    getReminders(userId) {
+      return readJson(userId, 'reminders.json', {})
+    },
+
+    saveReminders(userId, reminders) {
+      return writeJson(userId, 'reminders.json', reminders && typeof reminders === 'object' ? reminders : {})
+    },
   }
 }

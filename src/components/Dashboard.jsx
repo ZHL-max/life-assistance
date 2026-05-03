@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchLongTasks } from '../storage/cloudLongTasks'
 import { loadDailyReminders, saveDailyReminders } from '../storage/dailyReminder'
+import { fetchCloudReminders, replaceCloudReminders } from '../storage/cloudReminders'
 import './Dashboard.css'
 
 function getTodayKey() {
@@ -81,18 +82,44 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     return () => { ignore = true }
   }, [userId])
 
+  // 加载提醒：先从云端拉取，失败则用本地
   useEffect(() => {
-    const loaded = loadDailyReminders(todayKey)
-    setReminders(loaded)
-    if (loaded.length > 0) {
-      scheduleAllReminders(loaded)
+    let ignore = false
+
+    async function loadReminders() {
+      try {
+        const cloudData = await fetchCloudReminders(userId)
+        if (ignore) return
+        const todayReminders = cloudData[todayKey] || []
+        setReminders(todayReminders)
+        saveDailyReminders(todayKey, todayReminders)
+        if (todayReminders.length > 0) scheduleAllReminders(todayReminders)
+      } catch {
+        if (ignore) return
+        const local = loadDailyReminders(todayKey)
+        setReminders(local)
+        if (local.length > 0) scheduleAllReminders(local)
+      }
     }
-    return () => clearAllReminderTimers()
-  }, [todayKey])
+
+    loadReminders()
+    return () => { ignore = true; clearAllReminderTimers() }
+  }, [userId, todayKey])
 
   const todayTasks = tasks.filter(task => task.date === todayKey)
   const todayPending = todayTasks.filter(task => !task.done).length
   const activeLongTasks = longTasks.filter(task => task.status !== 'done')
+
+  const syncReminders = async (dateKey, next) => {
+    saveDailyReminders(dateKey, next)
+    try {
+      const cloudData = await fetchCloudReminders(userId)
+      cloudData[dateKey] = next
+      await replaceCloudReminders(cloudData, userId)
+    } catch {
+      // 云端同步失败，本地已保存
+    }
+  }
 
   const requestNotiPermission = async () => {
     if (!('Notification' in window)) return
@@ -115,8 +142,8 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     }
     const next = [...reminders, newReminder]
     setReminders(next)
-    saveDailyReminders(todayKey, next)
     scheduleAllReminders(next)
+    syncReminders(todayKey, next)
     setEditText('')
     setEditTime('')
     setIsAdding(false)
@@ -125,11 +152,11 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
   const handleDelete = (id) => {
     const next = reminders.filter(r => r.id !== id)
     setReminders(next)
-    saveDailyReminders(todayKey, next)
     if (reminderTimers.has(id)) {
       clearTimeout(reminderTimers.get(id))
       reminderTimers.delete(id)
     }
+    syncReminders(todayKey, next)
   }
 
   return (
