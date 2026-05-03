@@ -69,10 +69,6 @@ function getTermRange(termWeeks) {
   }
 }
 
-function toBuaaSourceTerm(termCode) {
-  return String(termCode ?? '').replaceAll('-', '')
-}
-
 function getCourseColor(title) {
   let hash = 0
   for (const char of title) hash = (hash + char.charCodeAt(0)) % COURSE_COLORS.length
@@ -98,7 +94,7 @@ export default function Schedule({ userId }) {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingWeek, setLoadingWeek] = useState(false)
-  const [buaaStatus, setBuaaStatus] = useState('')
+  const [, setBuaaStatus] = useState('')
   const [buaaTerms, setBuaaTerms] = useState([])
   const [termWeeks, setTermWeeks] = useState([])
   const [termWeeksTerm, setTermWeeksTerm] = useState('')
@@ -119,7 +115,7 @@ export default function Schedule({ userId }) {
           saveLocalScheduleEvents(userId, loaded)
           setMessage('')
         }
-      } catch (error) {
+      } catch {
         if (!ignore) {
           const localEvents = loadLocalScheduleEvents(userId)
           cachedEventsRef.current = localEvents
@@ -139,16 +135,23 @@ export default function Schedule({ userId }) {
 
         if (status.connected) {
           setBuaaStatus(`已登录：${status.user?.userName ?? status.user?.userId ?? '北航账号'}`)
-          const terms = await getBuaaTerms(userId)
-          if (ignore) return
-
-          const nextTerms = terms.datas ?? []
-          const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
-          setBuaaTerms(nextTerms)
-          setSelectedTerm(prev => prev || current)
         }
+
+        // 无论 connected 状态如何，都尝试拉取学期。
+        // 如果 Cookie 已过期但还能刷新，buaaFetch 会自动尝试。
+        const terms = await getBuaaTerms(userId)
+        if (ignore) return
+
+        const nextTerms = terms.datas ?? []
+        const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
+        setBuaaTerms(nextTerms)
+        setSelectedTerm(prev => prev || current)
+        setMessage('')
       } catch {
-        if (!ignore) setBuaaStatus('未登录北航')
+        if (!ignore) {
+          setBuaaStatus('未登录北航')
+          setMessage('北航登录已过期，请前往首页重新登录后再试。')
+        }
       }
     }
 
@@ -159,6 +162,24 @@ export default function Schedule({ userId }) {
       ignore = true
     }
   }, [userId])
+
+  const handleResync = async () => {
+    setMessage('')
+    setLoading(true)
+    try {
+      // 尝试拉取学期，buaaFetch 会自动尝试刷新过期的 Cookie
+      const terms = await getBuaaTerms(userId)
+      const nextTerms = terms.datas ?? []
+      const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
+      setBuaaTerms(nextTerms)
+      setSelectedTerm(prev => prev || current)
+      setMessage('')
+    } catch {
+      setMessage('同步失败，北航登录已过期，请前往首页重新登录。')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const weekDates = useMemo(() => (
     Array.from({ length: 7 }, (_, index) => addDays(weekStart, index))
@@ -178,14 +199,6 @@ export default function Schedule({ userId }) {
   const selectedWeek = selectedWeekIndex >= 0 ? activeTermWeeks[selectedWeekIndex] : null
   const isFirstTermWeek = selectedWeekIndex <= 0
   const isLastTermWeek = selectedWeekIndex < 0 || selectedWeekIndex >= activeTermWeeks.length - 1
-
-  const loadTerms = async () => {
-    const terms = await getBuaaTerms(userId)
-    const nextTerms = terms.datas ?? []
-    const current = nextTerms.find(term => term.selected)?.itemCode || nextTerms.at(-1)?.itemCode || ''
-    setBuaaTerms(nextTerms)
-    setSelectedTerm(prev => prev || current)
-  }
 
   const syncTerm = async (termCode, options = {}) => {
     if (!termCode) {
@@ -326,34 +339,21 @@ export default function Schedule({ userId }) {
   }
 
   const moveWeek = offset => {
-    if (activeTermWeeks.length === 0) {
-      // 没有教学周数据时，直接按 7 天偏移
-      setWeekStart(current => addDays(current, offset > 0 ? 7 : -7))
-      return
-    }
+    const direction = offset > 0 ? 1 : -1
 
-    if (selectedWeekIndex >= 0) {
-      const direction = offset > 0 ? 1 : -1
+    // When term weeks are loaded, navigate within term bounds
+    if (activeTermWeeks.length > 0 && selectedWeekIndex >= 0) {
       const nextIndex = Math.min(
         Math.max(selectedWeekIndex + direction, 0),
         activeTermWeeks.length - 1
       )
       const nextWeekStart = getWeekStartFromTermWeek(activeTermWeeks[nextIndex])
       if (nextWeekStart) setWeekStart(nextWeekStart)
-    } else {
-      // 当前周不在教学周列表中，找到最近的周
-      const direction = offset > 0 ? 1 : -1
-      const sorted = [...activeTermWeeks].sort((a, b) =>
-        String(a.startDate).localeCompare(String(b.startDate))
-      )
-      if (direction > 0) {
-        const next = sorted.find(w => String(w.startDate).slice(0, 10) > weekStart)
-        if (next) setWeekStart(String(next.startDate).slice(0, 10))
-      } else {
-        const prev = [...sorted].reverse().find(w => String(w.startDate).slice(0, 10) < weekStart)
-        if (prev) setWeekStart(String(prev.startDate).slice(0, 10))
-      }
+      return
     }
+
+    // No term loaded — allow free week navigation
+    setWeekStart(current => addDays(current, direction * 7))
   }
 
   return (
@@ -363,7 +363,7 @@ export default function Schedule({ userId }) {
           <button className="schedule-icon-btn" onClick={() => moveWeek(-7)} disabled={activeTermWeeks.length > 0 && isFirstTermWeek}>‹</button>
           <div>
           <h2>{selectedTermName || '课表'}</h2>
-          <p>{activeTermWeeks.length > 0 ? getWeekLabel(weekStart, activeTermWeeks) : '选择学期后自动同步'}</p>
+          <p>{activeTermWeeks.length > 0 ? getWeekLabel(weekStart, activeTermWeeks) : `${formatRangeDate(weekStart)} ~ ${formatRangeDate(addDays(weekStart, 6))}`}</p>
         </div>
         <button className="schedule-icon-btn" onClick={() => moveWeek(7)} disabled={activeTermWeeks.length > 0 && isLastTermWeek}>›</button>
       </div>
@@ -377,6 +377,9 @@ export default function Schedule({ userId }) {
               </option>
             ))}
           </select>
+          <button className="schedule-resync-btn" onClick={handleResync} disabled={loading}>
+            重新同步
+          </button>
         </div>
       </div>
 

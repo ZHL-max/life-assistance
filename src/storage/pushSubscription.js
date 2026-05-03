@@ -13,6 +13,7 @@ function urlBase64ToUint8Array(base64String) {
 
 export async function getVapidPublicKey() {
   const res = await fetch(`${API_BASE}/api/app/push/vapid-public-key`)
+  if (!res.ok) throw new Error('获取 VAPID 公钥失败')
   const data = await res.json()
   return data.publicKey
 }

@@ -1,3 +1,7 @@
+import { getTodayKey } from '../utils/date'
+
+export { getTodayKey }
+
 const STORAGE_KEY = 'life-assistant-tasks-v2'
 
 function getStorageKey(scope) {
@@ -17,15 +21,6 @@ function clearRepeatFields(task) {
   delete nextTask.generatedFrom
 
   return nextTask
-}
-
-export function getTodayKey() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 export function loadLocalTasks(scope) {

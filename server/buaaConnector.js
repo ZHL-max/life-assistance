@@ -134,11 +134,14 @@ function shouldTreatAsSessionExpired(bodyText) {
 
 async function fetchWithJar(url, jar, options = {}) {
   let response
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30_000)
 
   try {
     response = await fetch(url, {
       ...options,
       redirect: 'manual',
+      signal: controller.signal,
       headers: {
         Accept: 'text/html,application/json,*/*',
         'User-Agent': 'Mozilla/5.0 Pika-Life-Assistant-Connector',
@@ -147,7 +150,12 @@ async function fetchWithJar(url, jar, options = {}) {
       },
     })
   } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error(`请求北航超时：${url}`)
+    }
     throw new Error(`请求北航失败：${url}；${error.cause?.code ?? error.message}`)
+  } finally {
+    clearTimeout(timeout)
   }
 
   jar.addSetCookieHeaders(getSetCookieHeaders(response))
@@ -193,6 +201,17 @@ async function loadByxtLoginPage(jar) {
 export function createBuaaConnector({ dataDir }) {
   const usersDir = path.join(dataDir, 'users')
   const preLoginSessions = new Map()
+  const PRELOGIN_TTL = 5 * 60 * 1000 // 5 minutes
+
+  // Clean up expired preLogin sessions periodically
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, session] of preLoginSessions) {
+      if (now - session.createdAt > PRELOGIN_TTL) {
+        preLoginSessions.delete(key)
+      }
+    }
+  }, 60_000)
 
   function safeUserId(userId) {
     return String(userId ?? 'guest').replace(/[^\w.-]/g, '_')
@@ -302,9 +321,12 @@ export function createBuaaConnector({ dataDir }) {
 
     for (let attempt = 0; attempt < 2; attempt++) {
       let response
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 30_000)
       try {
         response = await fetch(`${BUAA_BASE_URL}${pathname}`, {
           method,
+          signal: controller.signal,
           headers: {
             Accept: 'application/json',
             'Content-Type': method === 'POST'
@@ -318,7 +340,12 @@ export function createBuaaConnector({ dataDir }) {
           body,
         })
       } catch (error) {
+        if (error.name === 'AbortError') {
+          throw new Error(`请求北航教务超时：${pathname}`)
+        }
         throw new Error(`请求北航教务失败：${pathname}；${error.cause?.code ?? error.message}`)
+      } finally {
+        clearTimeout(timeout)
       }
 
       if (!response.ok) {

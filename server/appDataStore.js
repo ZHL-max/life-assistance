@@ -53,9 +53,9 @@ export function createAppDataStore({ dataDir }) {
           ))
         : current
       const stampedEvents = nextEvents.map(event => ({
-        id: event.id ?? createId(),
-        createdAt: event.createdAt ?? Date.now(),
         ...event,
+        id: createId(),
+        createdAt: event.createdAt ?? Date.now(),
       }))
       return writeJson(userId, 'schedule.json', [...base, ...stampedEvents])
     },

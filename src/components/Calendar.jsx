@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { getTodayKey } from '../utils/date'
 import './Calendar.css'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
@@ -6,11 +7,6 @@ const MONTHS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '
 
 function formatKey(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-}
-
-function getTodayKey() {
-  const today = new Date()
-  return formatKey(today.getFullYear(), today.getMonth(), today.getDate())
 }
 
 function getDateLabel(dateKey) {
@@ -65,13 +61,18 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], onDay
     return set
   }, [longTasks])
 
-  const selectedTasks = allTasks.filter(task => task.date === selectedDate)
-  const selectedDDLs = longTasks.filter(lt => lt.dueDate === selectedDate && lt.status !== 'done')
+  const tasksByDate = useMemo(() => {
+    const map = new Map()
+    for (const task of allTasks) {
+      const list = map.get(task.date)
+      if (list) list.push(task)
+      else map.set(task.date, [task])
+    }
+    return map
+  }, [allTasks])
 
-  const getDayData = (dateKey) => {
-    const tasks = allTasks.filter(task => task.date === dateKey)
-    return { tasks, count: tasks.length }
-  }
+  const selectedTasks = tasksByDate.get(selectedDate) ?? []
+  const selectedDDLs = longTasks.filter(lt => lt.dueDate === selectedDate && lt.status !== 'done')
 
   return (
     <section className="calendar-app-card">
@@ -100,7 +101,8 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], onDay
           if (!day) return <div key={`empty-${index}`} className="calendar-day empty" />
 
           const dateKey = formatKey(viewYear, viewMonth, day)
-          const { tasks, count } = getDayData(dateKey)
+          const tasks = tasksByDate.get(dateKey) ?? []
+          const count = tasks.length
           const heat = getHeatLevel(count)
           const isToday = dateKey === today
           const isSelected = dateKey === selectedDate

@@ -8,6 +8,9 @@ import { getVapidPublicKey, startReminderScheduler } from './push.js'
 const ROOT_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const DATA_DIR = path.join(ROOT_DIR, 'data')
 const PORT = Number(process.env.PORT ?? process.env.CONNECTOR_PORT ?? 8787)
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : []
 const connector = createBuaaConnector({ dataDir: DATA_DIR })
 const appData = createAppDataStore({ dataDir: DATA_DIR })
 
@@ -17,10 +20,14 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body))
 }
 
-function setCors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+function setCors(req, res) {
+  const origin = req.headers.origin
+  if (ALLOWED_ORIGINS.length === 0 || (origin && ALLOWED_ORIGINS.includes(origin))) {
+    res.setHeader('Access-Control-Allow-Origin', origin ?? '*')
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
 }
 
 function readJsonBody(req) {
@@ -235,7 +242,7 @@ async function handleAppDataRequest(req, res, url) {
 }
 
 const server = http.createServer(async (req, res) => {
-  setCors(res)
+  setCors(req, res)
 
   if (req.method === 'OPTIONS') {
     res.statusCode = 204

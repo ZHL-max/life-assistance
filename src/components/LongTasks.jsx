@@ -8,6 +8,7 @@ import {
   updateLongTask,
   uploadLongTaskFile,
 } from '../storage/cloudLongTasks'
+import { getTodayKey } from '../utils/date'
 import './LongTasks.css'
 
 const STATUS_LABELS = {
@@ -24,15 +25,6 @@ const CATEGORY_LABELS = {
 const CATEGORY_ICONS = {
   competition: 'emoji_events',
   project: 'rocket_launch',
-}
-
-function getTodayKey() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}`
 }
 
 function formatFileSize(size) {
@@ -131,7 +123,7 @@ export default function LongTasks({ userId }) {
     setMessage('')
 
     try {
-      const saved = await updateLongTask(userId, task.id, nextTask)
+      const saved = await updateLongTask(userId, task.id, updates)
       setLongTasks(prev => prev.map(item => (
         item.id === task.id ? { ...item, ...saved } : item
       )))

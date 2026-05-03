@@ -1,7 +1,7 @@
 import webpush from 'web-push'
 
 const VAPID_PUBLIC_KEY = 'BLlnNW1SYg4rav32C7L84uGpPoalidHREdkNKmofBekomHEBhT1O8ufSZhOvpUgGB37LStoYXECb3IcGncgGwIk'
-const VAPID_PRIVATE_KEY = 'TYLtMvnhlI5h7qpGZSb-LytktahczihCU5nXi5nuID8'
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'TYLtMvnhlI5h7qpGZSb-LytktahczihCU5nXi5nuID8'
 const VAPID_SUBJECT = 'mailto:life-assistant@buaa.edu.cn'
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY)
@@ -41,10 +41,8 @@ export function startReminderScheduler(appData) {
     const today = getTodayKey()
     const key = `date:${today}`
     if (!processedKeys.has(key)) {
-      // 新的一天，清空旧记录
-      for (const k of processedKeys) {
-        if (k.startsWith('reminder:')) processedKeys.delete(k)
-      }
+      // 新的一天，清空所有旧记录（包括 date: 和 reminder: 前缀）
+      processedKeys.clear()
       processedKeys.add(key)
     }
   }
@@ -93,8 +91,8 @@ export function startReminderScheduler(appData) {
         const [hh, mm] = reminder.time.split(':').map(Number)
         const reminderMinutes = hh * 60 + mm
 
-        // 提醒时间已到（允许 1 分钟的检查窗口）
-        if (reminderMinutes <= currentMinutes && currentMinutes - reminderMinutes < 2) {
+        // 提醒时间已到（允许 5 分钟的检查窗口，避免服务短暂中断导致漏发）
+        if (reminderMinutes <= currentMinutes && currentMinutes - reminderMinutes < 5) {
           processedKeys.add(reminderKey)
 
           const payload = {

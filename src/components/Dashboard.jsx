@@ -1,17 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchLongTasks } from '../storage/cloudLongTasks'
 import { loadDailyReminders, saveDailyReminders } from '../storage/dailyReminder'
 import { fetchCloudReminders, replaceCloudReminders } from '../storage/cloudReminders'
 import { registerPushSubscription, checkPushSubscription } from '../storage/pushSubscription'
+import { getTodayKey } from '../utils/date'
 import './Dashboard.css'
-
-function getTodayKey() {
-  const today = new Date()
-  const year = today.getFullYear()
-  const month = String(today.getMonth() + 1).padStart(2, '0')
-  const day = String(today.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 export default function Dashboard({ userId, tasks, onNavigate }) {
   const [longTasks, setLongTasks] = useState([])
@@ -21,6 +14,8 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
   const [editTime, setEditTime] = useState('')
   const [pushEnabled, setPushEnabled] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
+  const remindersRef = useRef(reminders)
+  useEffect(() => { remindersRef.current = reminders }, [reminders])
 
   const todayKey = getTodayKey()
 
@@ -73,7 +68,8 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     saveDailyReminders(dateKey, next)
     try {
       const cloudData = await fetchCloudReminders(userId)
-      cloudData[dateKey] = next
+      // Use ref to get the latest state, avoiding stale closure from rapid calls
+      cloudData[dateKey] = remindersRef.current
       await replaceCloudReminders(cloudData, userId)
     } catch {
       // 云端同步失败，本地已保存
