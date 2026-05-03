@@ -198,6 +198,17 @@ async function handleAppDataRequest(req, res, url) {
     return
   }
 
+  if (url.pathname === '/api/app/profile' && req.method === 'GET') {
+    sendJson(res, 200, await appData.getProfile(userId))
+    return
+  }
+
+  if (url.pathname === '/api/app/profile' && req.method === 'PUT') {
+    const payload = await readJsonBody(req)
+    sendJson(res, 200, await appData.saveProfile(userId, payload))
+    return
+  }
+
   sendJson(res, 404, { error: '未知的 App 数据接口。' })
 }
 

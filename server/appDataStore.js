@@ -169,5 +169,16 @@ export function createAppDataStore({ dataDir }) {
         return []
       }
     },
+
+    getProfile(userId) {
+      return readJson(userId, 'profile.json', { nickname: '', theme: 'light' })
+    },
+
+    saveProfile(userId, profile) {
+      return writeJson(userId, 'profile.json', {
+        nickname: profile?.nickname || '',
+        theme: profile?.theme || 'light',
+      })
+    },
   }
 }

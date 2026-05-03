@@ -12,7 +12,9 @@ import Schedule from './components/Schedule'
 import Vault from './components/Vault'
 import Settings from './components/Settings'
 import BottomNav from './components/BottomNav'
-import { getLocalNickname } from './storage/nickname'
+import { getLocalNickname, saveLocalNickname } from './storage/nickname'
+import { getTheme, setTheme } from './storage/theme'
+import { fetchCloudProfile } from './storage/cloudProfile'
 import { fetchLongTasks } from './storage/cloudLongTasks'
 import { fetchScheduleEvents } from './storage/cloudSchedule'
 import {
@@ -86,6 +88,21 @@ function TaskApp({ session, onSignOut }) {
     return () => {
       ignore = true
     }
+  }, [userId])
+
+  // 从云端加载昵称和主题
+  useEffect(() => {
+    fetchCloudProfile(userId)
+      .then(profile => {
+        if (profile.nickname) {
+          saveLocalNickname(userId, profile.nickname)
+          setNickname(profile.nickname)
+        }
+        if (profile.theme) {
+          setTheme(profile.theme)
+        }
+      })
+      .catch(() => {})
   }, [userId])
 
   useEffect(() => {

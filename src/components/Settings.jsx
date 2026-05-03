@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getLocalNickname, saveLocalNickname } from '../storage/nickname'
 import { getTheme, setTheme } from '../storage/theme'
+import { saveCloudProfile } from '../storage/cloudProfile'
 import './Settings.css'
 
 export default function Settings({
@@ -15,9 +16,17 @@ export default function Settings({
   const [editingNickname, setEditingNickname] = useState(false)
   const [nicknameDraft, setNicknameDraft] = useState('')
 
+  const syncProfile = (data) => {
+    saveCloudProfile(userId, {
+      nickname: data.nickname ?? nickname,
+      theme: data.theme ?? currentTheme,
+    }).catch(() => {})
+  }
+
   const handleThemeChange = (theme) => {
     setTheme(theme)
     setCurrentTheme(theme)
+    syncProfile({ theme })
   }
 
   const startEditNickname = () => {
@@ -31,6 +40,7 @@ export default function Settings({
     onNicknameChange(trimmed)
     setNickname(trimmed)
     setEditingNickname(false)
+    syncProfile({ nickname: trimmed })
   }
 
   const cancelEditNickname = () => {
