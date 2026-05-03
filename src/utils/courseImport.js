@@ -232,7 +232,7 @@ export function parseBeihangApiSchedule(payload, semesterStartDate) {
 }
 
 export function parseBeihangWeeklySchedule(payload, weekStartDate, weekNumber) {
-  const courses = payload?.datas?.arrangedList ?? []
+  const courses = payload?.datas?.list ?? payload?.datas?.arrangedList ?? []
   const events = []
 
   for (const course of courses) {
