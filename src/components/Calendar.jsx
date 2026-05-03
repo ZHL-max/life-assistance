@@ -27,7 +27,7 @@ function getHeatLevel(count) {
   return 3
 }
 
-export default function Calendar({ selectedDate, allTasks, longTasks = [], scheduleEvents = [], onDayClick }) {
+export default function Calendar({ selectedDate, allTasks, longTasks = [], onDayClick }) {
   const today = getTodayKey()
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth())
@@ -66,13 +66,11 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], sched
   }, [longTasks])
 
   const selectedTasks = allTasks.filter(task => task.date === selectedDate)
-  const selectedCourses = scheduleEvents.filter(event => event.eventDate === selectedDate)
   const selectedDDLs = longTasks.filter(lt => lt.dueDate === selectedDate && lt.status !== 'done')
 
   const getDayData = (dateKey) => {
     const tasks = allTasks.filter(task => task.date === dateKey)
-    const courses = scheduleEvents.filter(event => event.eventDate === dateKey)
-    return { tasks, courses, count: tasks.length + courses.length }
+    return { tasks, count: tasks.length }
   }
 
   return (
@@ -102,7 +100,7 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], sched
           if (!day) return <div key={`empty-${index}`} className="calendar-day empty" />
 
           const dateKey = formatKey(viewYear, viewMonth, day)
-          const { tasks, courses, count } = getDayData(dateKey)
+          const { tasks, count } = getDayData(dateKey)
           const heat = getHeatLevel(count)
           const isToday = dateKey === today
           const isSelected = dateKey === selectedDate
@@ -110,9 +108,8 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], sched
           const dayOfWeek = new Date(viewYear, viewMonth, day).getDay()
           const isWeekend = dayOfWeek === 0 || dayOfWeek === 6
 
-          const visibleTasks = tasks.slice(0, 2)
-          const visibleCourses = courses.slice(0, 1)
-          const moreCount = Math.max(0, tasks.length + courses.length - 3)
+          const visibleTasks = tasks.slice(0, 3)
+          const moreCount = Math.max(0, tasks.length - 3)
 
           return (
             <button
@@ -127,9 +124,6 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], sched
                 {hasDDL && <span className="ddl-dot" title="有 DDL 截止" />}
               </div>
               <div className="calendar-day-items">
-                {courses.map(c => (
-                  <span key={`c-${c.id}`} className="calendar-pill course">{c.title}</span>
-                ))}
                 {visibleTasks.map(t => (
                   <span key={`t-${t.id}`} className={`calendar-pill ${t.done ? 'task-done' : 'task'}`}>{t.text}</span>
                 ))}
@@ -145,34 +139,8 @@ export default function Calendar({ selectedDate, allTasks, longTasks = [], sched
       <section className="calendar-detail">
         <h3 className="detail-date-label">{getDateLabel(selectedDate)}</h3>
 
-        {selectedCourses.length === 0 && selectedTasks.length === 0 && selectedDDLs.length === 0 && (
+        {selectedTasks.length === 0 && selectedDDLs.length === 0 && (
           <p className="calendar-empty">这天还没有安排。</p>
-        )}
-
-        {selectedCourses.length > 0 && (
-          <div className="detail-section">
-            <p className="detail-section-title">
-              <span className="material-symbols-outlined">school</span>
-              课程
-            </p>
-            <div className="detail-cards">
-              {selectedCourses.map(course => (
-                <div key={`course-${course.id}`} className="detail-card course-card">
-                  <strong>{course.title}</strong>
-                  <span className="detail-meta">
-                    <span className="material-symbols-outlined">schedule</span>
-                    {course.startSection}-{course.endSection}节
-                  </span>
-                  {course.location && (
-                    <span className="detail-meta">
-                      <span className="material-symbols-outlined">location_on</span>
-                      {course.location}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         )}
 
         {selectedTasks.length > 0 && (

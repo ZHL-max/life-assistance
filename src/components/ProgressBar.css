@@ -33,7 +33,7 @@
   height: 8px;
   background: var(--surface-container-high);
   border-radius: 8px;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .progress-fill {
@@ -58,22 +58,6 @@
 @keyframes shimmer {
   0%   { background-position: -100% center; }
   100% { background-position: 200% center; }
-}
-
-.progress-pct-badge {
-  position: absolute;
-  top: -24px;
-  transform: translateX(-50%);
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: var(--amber-dark);
-  background: var(--surface-bright);
-  border: 1px solid rgba(217, 119, 6, 0.22);
-  padding: 1px 5px;
-  border-radius: 4px;
-  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  white-space: nowrap;
-  box-shadow: 0 1px 4px var(--amber-glow);
 }
 
 .progress-message {

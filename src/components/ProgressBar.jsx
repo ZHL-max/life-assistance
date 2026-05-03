@@ -24,9 +24,6 @@ export default function ProgressBar({ total, done }) {
           className="progress-fill"
           style={{ width: `${pct}%` }}
         />
-        <span className="progress-pct-badge" style={{ left: `max(${pct}%, 36px)` }}>
-          {pct}%
-        </span>
       </div>
 
       <div className="progress-message">{getMessage()}</div>

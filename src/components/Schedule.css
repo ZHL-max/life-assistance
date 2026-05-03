@@ -53,46 +53,27 @@
 }
 
 .schedule-login-strip {
-  display: grid;
-  grid-template-columns: auto minmax(140px, 1fr) auto;
-  gap: 6px;
   margin-top: 10px;
+  padding: 0 4px;
 }
 
-.schedule-login-strip input,
-.schedule-login-strip select,
-.schedule-login-strip button {
-  min-width: 0;
+.schedule-login-strip select {
+  width: 100%;
   height: 32px;
+  min-width: 0;
   border: none;
   border-radius: 6px;
   font-family: var(--font-primary);
   font-size: 0.76rem;
-}
-
-.schedule-login-strip input,
-.schedule-login-strip select {
-  background: var(--surface-container-lowest);
-  color: var(--on-surface);
-  padding: 0 8px;
-}
-
-.schedule-login-strip button {
+  background: rgba(255, 255, 255, 0.15);
   color: var(--on-primary);
-  background: rgba(0, 0, 0, 0.2);
-  font-weight: 700;
-  padding: 0 10px;
+  padding: 0 8px;
   cursor: pointer;
 }
 
-.schedule-login-strip .sync-btn {
-  background: var(--amber-gradient);
-  color: var(--amber-dark);
-}
-
-.schedule-login-strip button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+.schedule-login-strip select option {
+  color: #333;
+  background: #fff;
 }
 
 .schedule-status {
@@ -285,13 +266,3 @@
   background: var(--primary-dim);
 }
 
-@media (max-width: 720px) {
-  .schedule-login-strip {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .schedule-login-strip select,
-  .schedule-login-strip .sync-btn {
-    grid-column: span 1;
-  }
-}

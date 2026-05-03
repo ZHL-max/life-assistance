@@ -12,20 +12,30 @@ export default function Settings({
   const schoolId = userEmail?.split('@')[0] ?? ''
   const [nickname, setNickname] = useState(() => getLocalNickname(userId))
   const [currentTheme, setCurrentTheme] = useState(() => getTheme())
-
-  const handleSaveNickname = () => {
-    try {
-      saveLocalNickname(userId, nickname.trim())
-      onNicknameChange(nickname.trim())
-      window.alert('昵称已保存。')
-    } catch {
-      window.alert('保存失败，请稍后再试。')
-    }
-  }
+  const [editingNickname, setEditingNickname] = useState(false)
+  const [nicknameDraft, setNicknameDraft] = useState('')
 
   const handleThemeChange = (theme) => {
     setTheme(theme)
     setCurrentTheme(theme)
+  }
+
+  const startEditNickname = () => {
+    setNicknameDraft(nickname)
+    setEditingNickname(true)
+  }
+
+  const saveNickname = () => {
+    const trimmed = nicknameDraft.trim()
+    saveLocalNickname(userId, trimmed)
+    onNicknameChange(trimmed)
+    setNickname(trimmed)
+    setEditingNickname(false)
+  }
+
+  const cancelEditNickname = () => {
+    setEditingNickname(false)
+    setNicknameDraft('')
   }
 
   const themes = [
@@ -36,44 +46,97 @@ export default function Settings({
 
   return (
     <section className="settings-page">
-      <section className="settings-card">
-        <h3>外观</h3>
-        <div className="theme-options">
+      {/* Profile Header */}
+      <div className="settings-profile">
+        <div className="settings-avatar">
+          <span className="material-symbols-outlined">person</span>
+        </div>
+        <div className="settings-profile-info">
+          <strong>{nickname || '未设置昵称'}</strong>
+          <span>{schoolId}</span>
+        </div>
+      </div>
+
+      {/* Nickname Edit Modal */}
+      {editingNickname && (
+        <div className="settings-modal-backdrop" onClick={cancelEditNickname}>
+          <div className="settings-modal" onClick={e => e.stopPropagation()}>
+            <h3>修改昵称</h3>
+            <input
+              className="settings-modal-input"
+              value={nicknameDraft}
+              onChange={e => setNicknameDraft(e.target.value)}
+              placeholder="给自己取一个名字"
+              maxLength={24}
+              autoFocus
+            />
+            <div className="settings-modal-actions">
+              <button className="settings-modal-btn cancel" onClick={cancelEditNickname}>取消</button>
+              <button className="settings-modal-btn save" onClick={saveNickname}>保存</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Account Section */}
+      <div className="settings-group">
+        <p className="settings-group-title">账号</p>
+        <div className="settings-list">
+          <button className="settings-item" onClick={startEditNickname}>
+            <span className="settings-item-icon material-symbols-outlined">badge</span>
+            <span className="settings-item-label">昵称</span>
+            <span className="settings-item-value">{nickname || '未设置'}</span>
+            <span className="settings-item-arrow material-symbols-outlined">chevron_right</span>
+          </button>
+          <div className="settings-item">
+            <span className="settings-item-icon material-symbols-outlined">school</span>
+            <span className="settings-item-label">学号</span>
+            <span className="settings-item-value">{schoolId}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Appearance Section */}
+      <div className="settings-group">
+        <p className="settings-group-title">外观</p>
+        <div className="settings-list">
           {themes.map(t => (
             <button
               key={t.value}
-              className={`theme-option ${currentTheme === t.value ? 'active' : ''}`}
+              className={`settings-item ${currentTheme === t.value ? 'active' : ''}`}
               onClick={() => handleThemeChange(t.value)}
             >
-              <span className="material-symbols-outlined">{t.icon}</span>
-              {t.label}
+              <span className="settings-item-icon material-symbols-outlined">{t.icon}</span>
+              <span className="settings-item-label">{t.label}</span>
+              {currentTheme === t.value && (
+                <span className="settings-item-check material-symbols-outlined">check</span>
+              )}
             </button>
           ))}
         </div>
-      </section>
+      </div>
 
-      <section className="settings-card">
-        <h3>账号</h3>
-        <div className="setting-row">
-          <span>当前登录</span>
-          <strong>{schoolId}</strong>
+      {/* About Section */}
+      <div className="settings-group">
+        <p className="settings-group-title">关于</p>
+        <div className="settings-list">
+          <div className="settings-item">
+            <span className="settings-item-icon material-symbols-outlined">info</span>
+            <span className="settings-item-label">版本</span>
+            <span className="settings-item-value">1.0.0</span>
+          </div>
         </div>
-        <label className="setting-field">
-          <span>显示昵称</span>
-          <input
-            value={nickname}
-            onChange={event => setNickname(event.target.value)}
-            placeholder="给自己取一个名字"
-            maxLength={24}
-          />
-        </label>
-        <button className="settings-button" onClick={handleSaveNickname}>
-          保存昵称
-        </button>
-        <button className="settings-danger" onClick={onSignOut}>
-          退出登录
-        </button>
-      </section>
+      </div>
+
+      {/* Logout */}
+      <div className="settings-group">
+        <div className="settings-list">
+          <button className="settings-item danger" onClick={onSignOut}>
+            <span className="settings-item-icon material-symbols-outlined">logout</span>
+            <span className="settings-item-label">退出登录</span>
+          </button>
+        </div>
+      </div>
     </section>
   )
 }

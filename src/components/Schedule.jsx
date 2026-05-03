@@ -103,7 +103,6 @@ export default function Schedule({ userId }) {
   const [termWeeks, setTermWeeks] = useState([])
   const [termWeeksTerm, setTermWeeksTerm] = useState('')
   const [selectedTerm, setSelectedTerm] = useState('')
-  const [syncing, setSyncing] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [autoSyncedTerm, setAutoSyncedTerm] = useState('')
   const syncRequestRef = useRef(0)
@@ -187,20 +186,6 @@ export default function Schedule({ userId }) {
     setSelectedTerm(prev => prev || current)
   }
 
-  const handleCheckStatus = async () => {
-    try {
-      const status = await getBuaaStatus()
-      if (status.connected) {
-        setBuaaStatus(`已登录：${status.user?.userName ?? status.user?.userId ?? '北航账号'}`)
-        await loadTerms()
-      } else {
-        setBuaaStatus('未登录北航')
-      }
-    } catch (error) {
-      setBuaaStatus(`不可用：${error.message}`)
-    }
-  }
-
   const syncTerm = async (termCode, options = {}) => {
     if (!termCode) {
       setMessage('请先登录并选择学期。')
@@ -209,7 +194,6 @@ export default function Schedule({ userId }) {
 
     const requestId = syncRequestRef.current + 1
     syncRequestRef.current = requestId
-    setSyncing(true)
     setTermWeeks([])
     setTermWeeksTerm('')
     if (!options.silent) setMessage('')
@@ -237,7 +221,7 @@ export default function Schedule({ userId }) {
         setMessage(`同步北航课表失败：${text || '未知错误'}`)
       }
     } finally {
-      if (syncRequestRef.current === requestId) setSyncing(false)
+      // sync complete
     }
   }
 
@@ -313,10 +297,6 @@ export default function Schedule({ userId }) {
     loadSelectedWeek()
   }, [selectedTerm, selectedWeek, userId, weekDates, weekStart])
 
-  const handleSync = async () => {
-    await syncTerm(selectedTerm)
-  }
-
   const handleTermChange = value => {
     syncRequestRef.current += 1
     setSelectedTerm(value)
@@ -324,7 +304,6 @@ export default function Schedule({ userId }) {
     setTermWeeksTerm('')
     setSelectedCourse(null)
     setMessage('')
-    setSyncing(false)
   }
 
   const moveWeek = offset => {
@@ -352,18 +331,14 @@ export default function Schedule({ userId }) {
       </div>
 
       <div className="schedule-login-strip">
-          <button onClick={handleCheckStatus}>检测</button>
           <select value={selectedTerm} onChange={event => handleTermChange(event.target.value)}>
-            <option value="">学期</option>
+            <option value="">选择学期</option>
             {buaaTerms.map(term => (
               <option key={term.itemCode} value={term.itemCode}>
                 {term.itemName}
               </option>
             ))}
           </select>
-          <button className="sync-btn" onClick={handleSync} disabled={syncing || !selectedTerm}>
-            同步
-          </button>
         </div>
       </div>
 
