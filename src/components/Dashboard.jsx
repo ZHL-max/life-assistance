@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchLongTasks } from '../storage/cloudLongTasks'
 import { loadDailyReminders, saveDailyReminders } from '../storage/dailyReminder'
 import { fetchCloudReminders, replaceCloudReminders } from '../storage/cloudReminders'
+import { registerPushSubscription, checkPushSubscription } from '../storage/pushSubscription'
 import './Dashboard.css'
 
 function getTodayKey() {
@@ -12,59 +13,14 @@ function getTodayKey() {
   return `${year}-${month}-${day}`
 }
 
-const reminderTimers = new Map()
-
-function clearAllReminderTimers() {
-  for (const timer of reminderTimers.values()) {
-    clearTimeout(timer)
-  }
-  reminderTimers.clear()
-}
-
-function scheduleAllReminders(reminders) {
-  clearAllReminderTimers()
-  if (!('Notification' in window)) return
-
-  for (const r of reminders) {
-    if (!r.message || !r.time) continue
-
-    const [hh, mm] = r.time.split(':').map(Number)
-    const target = new Date()
-    target.setHours(hh, mm, 0, 0)
-    const delay = target.getTime() - Date.now()
-
-    if (delay <= 0) continue
-
-    const timer = setTimeout(async () => {
-      reminderTimers.delete(r.id)
-      try {
-        const permission = Notification.permission === 'granted'
-          ? 'granted'
-          : await Notification.requestPermission()
-        if (permission !== 'granted') return
-        new Notification('今日提醒', {
-          body: r.message,
-          icon: '/pika-icon.svg',
-          tag: `reminder-${r.id}`,
-        })
-      } catch {
-        // ignore
-      }
-    }, delay)
-
-    reminderTimers.set(r.id, timer)
-  }
-}
-
 export default function Dashboard({ userId, tasks, onNavigate }) {
   const [longTasks, setLongTasks] = useState([])
   const [reminders, setReminders] = useState([])
   const [isAdding, setIsAdding] = useState(false)
   const [editText, setEditText] = useState('')
   const [editTime, setEditTime] = useState('')
-  const [notiPermission, setNotiPermission] = useState(
-    'Notification' in window ? Notification.permission : 'denied'
-  )
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushLoading, setPushLoading] = useState(false)
 
   const todayKey = getTodayKey()
 
@@ -82,7 +38,12 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     return () => { ignore = true }
   }, [userId])
 
-  // 加载提醒：先从云端拉取，失败则用本地
+  // 检查推送订阅状态
+  useEffect(() => {
+    checkPushSubscription().then(setPushEnabled).catch(() => {})
+  }, [])
+
+  // 加载提醒
   useEffect(() => {
     let ignore = false
 
@@ -93,17 +54,15 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
         const todayReminders = cloudData[todayKey] || []
         setReminders(todayReminders)
         saveDailyReminders(todayKey, todayReminders)
-        if (todayReminders.length > 0) scheduleAllReminders(todayReminders)
       } catch {
         if (ignore) return
         const local = loadDailyReminders(todayKey)
         setReminders(local)
-        if (local.length > 0) scheduleAllReminders(local)
       }
     }
 
     loadReminders()
-    return () => { ignore = true; clearAllReminderTimers() }
+    return () => { ignore = true }
   }, [userId, todayKey])
 
   const todayTasks = tasks.filter(task => task.date === todayKey)
@@ -121,18 +80,30 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     }
   }
 
-  const requestNotiPermission = async () => {
-    if (!('Notification' in window)) return
-    const result = await Notification.requestPermission()
-    setNotiPermission(result)
+  const handleEnablePush = async () => {
+    setPushLoading(true)
+    try {
+      await registerPushSubscription(userId)
+      setPushEnabled(true)
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setPushLoading(false)
+    }
   }
 
   const handleAdd = async () => {
     const msg = editText.trim()
     if (!msg) return
 
-    if (notiPermission === 'default') {
-      await requestNotiPermission()
+    // 如果还没开启推送，先开启
+    if (!pushEnabled) {
+      try {
+        await registerPushSubscription(userId)
+        setPushEnabled(true)
+      } catch {
+        // 用户拒绝了权限，仍然允许添加提醒（App 打开时会通过服务端推送）
+      }
     }
 
     const newReminder = {
@@ -142,7 +113,6 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
     }
     const next = [...reminders, newReminder]
     setReminders(next)
-    scheduleAllReminders(next)
     syncReminders(todayKey, next)
     setEditText('')
     setEditTime('')
@@ -152,10 +122,6 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
   const handleDelete = (id) => {
     const next = reminders.filter(r => r.id !== id)
     setReminders(next)
-    if (reminderTimers.has(id)) {
-      clearTimeout(reminderTimers.get(id))
-      reminderTimers.delete(id)
-    }
     syncReminders(todayKey, next)
   }
 
@@ -172,6 +138,14 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
             </button>
           )}
         </div>
+
+        {/* 推送通知开启按钮 */}
+        {!pushEnabled && 'Notification' in window && Notification.permission !== 'denied' && (
+          <button className="push-enable-btn" onClick={handleEnablePush} disabled={pushLoading}>
+            <span className="material-symbols-outlined">notifications</span>
+            {pushLoading ? '正在开启...' : '开启推送通知（关掉 App 也能收到提醒）'}
+          </button>
+        )}
 
         {/* 提醒列表 */}
         {reminders.length > 0 && (
@@ -231,13 +205,6 @@ export default function Dashboard({ userId, tasks, onNavigate }) {
           reminders.length === 0 && (
             <p className="reminder-placeholder" onClick={() => setIsAdding(true)}>点击添加今日提醒</p>
           )
-        )}
-
-        {/* 通知权限提示 */}
-        {notiPermission === 'denied' && (
-          <p className="reminder-permission-hint">
-            通知权限已关闭，请在浏览器设置中允许通知才能收到提醒。
-          </p>
         )}
       </div>
 

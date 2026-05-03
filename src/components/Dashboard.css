@@ -54,6 +54,37 @@
   color: #fff;
 }
 
+.push-enable-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--amber-dark);
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--amber-dark);
+  font-family: var(--font-primary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--t-smooth);
+}
+
+.push-enable-btn:hover {
+  background: rgba(217, 119, 6, 0.15);
+}
+
+.push-enable-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.push-enable-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
 /* Reminder List */
 .reminder-list {
   display: flex;

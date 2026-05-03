@@ -3,6 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createAppDataStore } from './appDataStore.js'
 import { createBuaaConnector } from './buaaConnector.js'
+import { getVapidPublicKey, startReminderScheduler } from './push.js'
 
 const ROOT_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const DATA_DIR = path.join(ROOT_DIR, 'data')
@@ -176,6 +177,27 @@ async function handleAppDataRequest(req, res, url) {
     return
   }
 
+  if (url.pathname === '/api/app/push/subscribe' && req.method === 'POST') {
+    const payload = await readJsonBody(req)
+    const subs = await appData.getPushSubscriptions(userId)
+    const endpoint = payload.subscription?.endpoint
+    if (endpoint && !subs.some(s => s.endpoint === endpoint)) {
+      subs.push({ endpoint, subscription: payload.subscription, createdAt: Date.now() })
+      await appData.savePushSubscriptions(userId, subs)
+    }
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
+  if (url.pathname === '/api/app/push/unsubscribe' && req.method === 'POST') {
+    const payload = await readJsonBody(req)
+    const subs = await appData.getPushSubscriptions(userId)
+    const next = subs.filter(s => s.endpoint !== payload.endpoint)
+    await appData.savePushSubscriptions(userId, next)
+    sendJson(res, 200, { ok: true })
+    return
+  }
+
   sendJson(res, 404, { error: '未知的 App 数据接口。' })
 }
 
@@ -193,6 +215,11 @@ const server = http.createServer(async (req, res) => {
   try {
     if (url.pathname === '/health') {
       sendJson(res, 200, { ok: true, service: 'pika-buaa-connector' })
+      return
+    }
+
+    if (url.pathname === '/api/app/push/vapid-public-key' && req.method === 'GET') {
+      sendJson(res, 200, { publicKey: getVapidPublicKey() })
       return
     }
 
@@ -214,4 +241,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Pika BUAA Connector listening on http://127.0.0.1:${PORT}`)
+  startReminderScheduler(appData)
 })

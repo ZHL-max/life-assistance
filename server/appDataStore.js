@@ -152,5 +152,22 @@ export function createAppDataStore({ dataDir }) {
     saveReminders(userId, reminders) {
       return writeJson(userId, 'reminders.json', reminders && typeof reminders === 'object' ? reminders : {})
     },
+
+    getPushSubscriptions(userId) {
+      return readJson(userId, 'push-subscriptions.json', [])
+    },
+
+    savePushSubscriptions(userId, subs) {
+      return writeJson(userId, 'push-subscriptions.json', Array.isArray(subs) ? subs : [])
+    },
+
+    async listUsers() {
+      try {
+        const entries = await fs.readdir(usersDir, { withFileTypes: true })
+        return entries.filter(e => e.isDirectory()).map(e => e.name)
+      } catch {
+        return []
+      }
+    },
   }
 }
