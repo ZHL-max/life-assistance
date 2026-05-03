@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getBuaaStatus, loginBuaa, logoutBuaa, preloadBuaaLogin } from '../storage/buaaConnector'
+import { preloadBuaaLogin, loginBuaa, logoutBuaa } from '../storage/buaaConnector'
+import { saveLocalSession, loadLocalSession, clearLocalSession } from '../storage/localSession'
 import './AuthGate.css'
 
 function createAppSession(buaaUser) {
@@ -30,26 +31,28 @@ export default function AuthGate({ children }) {
   useEffect(() => {
     let mounted = true
 
-    async function hydrateLogin() {
-      try {
-        const status = await getBuaaStatus()
-        if (!mounted) return
-
-        if (status.connected && status.user) {
-          setSession(createAppSession(status.user))
-          return
+    async function checkAuth() {
+      // 优先检查本地存储的登录状态
+      const local = loadLocalSession()
+      if (local && local.user?.id) {
+        if (mounted) {
+          setSession(local)
+          setLoading(false)
         }
+        return
+      }
 
+      // 本地没有登录记录，加载登录页
+      try {
         const preload = await preloadBuaaLogin()
         if (mounted) setPreLogin(preload)
       } catch {
-        if (mounted) setSession(null)
-      } finally {
-        if (mounted) setLoading(false)
+        // ignore
       }
+      if (mounted) setLoading(false)
     }
 
-    hydrateLogin()
+    checkAuth()
 
     return () => {
       mounted = false
@@ -70,7 +73,9 @@ export default function AuthGate({ children }) {
       })
       setPassword('')
       setCaptcha('')
-      setSession(createAppSession(result.user))
+      const newSession = createAppSession(result.user)
+      saveLocalSession(newSession)
+      setSession(newSession)
     } catch (error) {
       setMessage(error.message)
       const preload = await preloadBuaaLogin().catch(() => null)
@@ -88,9 +93,16 @@ export default function AuthGate({ children }) {
 
   const handleSignOut = async () => {
     await logoutBuaa().catch(() => {})
+    clearLocalSession()
     setSession(null)
-    const preload = await preloadBuaaLogin().catch(() => null)
-    if (preload) setPreLogin(preload)
+    setUsername('')
+    setPassword('')
+    try {
+      const preload = await preloadBuaaLogin()
+      setPreLogin(preload)
+    } catch {
+      // ignore
+    }
   }
 
   if (loading) {
@@ -98,7 +110,7 @@ export default function AuthGate({ children }) {
       <div className="auth-shell">
         <div className="auth-card compact">
           <img className="auth-mascot" src="/pika-icon.svg" alt="" aria-hidden="true" />
-          <p>正在检查北航登录状态...</p>
+          <p>正在加载...</p>
         </div>
       </div>
     )
@@ -115,7 +127,7 @@ export default function AuthGate({ children }) {
         <p className="auth-eyebrow">BUAA · Life Assistant</p>
         <h1>登录北航账号</h1>
         <p className="auth-copy">
-          使用北航学号和统一认证密码登录。Connector 会负责教务会话和本地数据，不再依赖邮箱账号。
+          使用北航学号和统一认证密码登录。
         </p>
 
         <label className="auth-field">
